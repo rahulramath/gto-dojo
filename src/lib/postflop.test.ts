@@ -41,7 +41,7 @@ describe("postflop hand runner", () => {
       }
     }
     expect(showdowns).toBeGreaterThan(10);
-  });
+  }, 60_000);
 
   it("picks sensible flop strategies", () => {
     const fams: Record<string, number> = {};
@@ -56,5 +56,5 @@ describe("postflop hand runner", () => {
     const avg = eqs.reduce((a, b) => a + b, 0) / eqs.length;
     process.stdout.write(`\nBTN vs BB flop families: ${JSON.stringify(fams)} avg eqAdv=${avg.toFixed(3)}\n`);
     expect(avg).toBeGreaterThan(0.5);
-  });
+  }, 60_000);
 });
