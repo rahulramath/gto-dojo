@@ -31,6 +31,9 @@ export interface Counters {
   rfiSeats: PosId[];
   stakeDecisions: Partial<Record<StakeId, number>>;
   nightOwl: number;
+  sessions: number;
+  perfectSessions: number;
+  dailies: number;
 }
 
 export const EMPTY_COUNTERS: Counters = {
@@ -61,6 +64,9 @@ export const EMPTY_COUNTERS: Counters = {
   rfiSeats: [],
   stakeDecisions: {},
   nightOwl: 0,
+  sessions: 0,
+  perfectSessions: 0,
+  dailies: 0,
 };
 
 export interface AchState {
@@ -85,6 +91,9 @@ const c = (s: AchState) => s.counters;
 
 export const ACHIEVEMENTS: Achievement[] = [
   { id: "first-hand", name: "First Hand", desc: "Make your first decision.", icon: "🃏", xp: 20, group: "Habits", progress: (s) => [c(s).decisions, 1] },
+  { id: "first-session", name: "Warmed Up", desc: "Finish your first session.", icon: "✅", xp: 30, group: "Habits", progress: (s) => [c(s).sessions, 1] },
+  { id: "flawless", name: "Flawless", desc: "Finish a session with every hand right.", icon: "💎", xp: 150, group: "Accuracy", progress: (s) => [c(s).perfectSessions, 1] },
+  { id: "daily-3", name: "Daily Regular", desc: "Play 3 Daily Challenges.", icon: "📆", xp: 90, group: "Habits", progress: (s) => [c(s).dailies, 3] },
   { id: "dealers-choice", name: "Dealer's Choice", desc: "25 correct decisions on the button.", icon: "🎩", xp: 60, group: "Seats", progress: (s) => [posCorrect(s, "BTN"), 25] },
   { id: "button-bandit", name: "Button Bandit", desc: "150 correct decisions on the button.", icon: "🦝", xp: 150, group: "Seats", progress: (s) => [posCorrect(s, "BTN"), 150] },
   { id: "sb-survivor", name: "Small Blind Survivor", desc: "50 correct decisions from the small blind.", icon: "🛡️", xp: 100, group: "Seats", progress: (s) => [posCorrect(s, "SB"), 50] },

@@ -90,6 +90,14 @@ interface DayStat {
   decisions: number;
   correct: number;
   xp: number;
+  sessions?: number;
+}
+
+export interface SessionRecord {
+  t: number;
+  mode: string;
+  score: number;
+  total: number;
 }
 
 interface State {
@@ -108,8 +116,13 @@ interface State {
   mathBest: Record<string, number>;
   paintBest: Record<string, number>;
   legendsSeen: string[];
+  sessions: SessionRecord[];
+  daily: Record<string, { score: number; total: number; marks: string }>;
+  quizBest: Record<number, number>;
 
   setSettings: (p: Partial<Settings>) => void;
+  recordQuiz: (day: number, score: number) => void;
+  recordSession: (mode: string, score: number, total: number, marks: string) => Reward;
   recordDecision: (d: DecisionInput) => Reward;
   bump: (key: keyof Counters, n?: number) => Reward;
   completeLesson: (day: number, quiz: number) => Reward;
@@ -157,6 +170,9 @@ const initialData = () => ({
   mathBest: {} as Record<string, number>,
   paintBest: {} as Record<string, number>,
   legendsSeen: [] as string[],
+  sessions: [] as SessionRecord[],
+  daily: {} as Record<string, { score: number; total: number; marks: string }>,
+  quizBest: {} as Record<number, number>,
 });
 
 const DATA_KEYS = Object.keys(initialData()) as (keyof Data)[];
@@ -165,7 +181,7 @@ function touchDay(s: State, xp: number, decision: boolean, correct: boolean): Pi
   const today = todayKey();
   const days = { ...s.days };
   const d = days[today] ?? { decisions: 0, correct: 0, xp: 0 };
-  days[today] = { decisions: d.decisions + (decision ? 1 : 0), correct: d.correct + (correct ? 1 : 0), xp: d.xp + xp };
+  days[today] = { ...d, decisions: d.decisions + (decision ? 1 : 0), correct: d.correct + (correct ? 1 : 0), xp: d.xp + xp };
   let { current, best, last } = s.streak;
   if (last !== today) {
     current = last && daysBetween(last, today) === 1 ? current + 1 : 1;
@@ -220,10 +236,32 @@ export const useStore = create<State>()(
 
         setSettings: (p) => set({ settings: { ...get().settings, ...p } }),
 
+        recordQuiz: (day, score) => set({ quizBest: { ...get().quizBest, [day]: Math.max(score, get().quizBest[day] ?? 0) } }),
+
+        recordSession: (mode, score, total, marks) => {
+          const s = get();
+          const today = todayKey();
+          const perfect = total >= 5 && score === total;
+          const counters = {
+            ...s.counters,
+            sessions: s.counters.sessions + 1,
+            perfectSessions: s.counters.perfectSessions + (perfect ? 1 : 0),
+            dailies: s.counters.dailies + (mode === "daily" && !s.daily[today] ? 1 : 0),
+          };
+          const daily = mode === "daily" && !s.daily[today] ? { ...s.daily, [today]: { score, total, marks } } : s.daily;
+          const d = s.days[today] ?? { decisions: 0, correct: 0, xp: 0 };
+          set({
+            counters,
+            daily,
+            sessions: [...s.sessions, { t: Date.now(), mode, score, total }].slice(-200),
+            days: { ...s.days, [today]: { ...d, sessions: (d.sessions ?? 0) + 1 } },
+          });
+          return finalize(20 + (perfect ? 30 : 0), true, false);
+        },
+
         recordDecision: (d) => {
           const s = get();
-          const lens = s.settings.lens;
-          const g = lens === "exploit" && d.exploitGrade ? d.exploitGrade : d.grade;
+          const g = d.grade;
           const meta = GRADES[g];
           const correct = meta.correct;
           const c: Counters = { ...s.counters, byArch: { ...s.counters.byArch }, stakeDecisions: { ...s.counters.stakeDecisions }, rfiSeats: [...s.counters.rfiSeats] };

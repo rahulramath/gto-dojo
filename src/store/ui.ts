@@ -47,19 +47,15 @@ export const useUi = create<UiState>()((set, get) => ({
   burst: () => set({ confetti: get().confetti + 1 }),
 }));
 
-/** Surface level-ups, belts and achievements from a reward. */
+/** Surface level-ups, belts and achievements without interrupting play. */
 export function announce(r: Reward): void {
   const ui = useUi.getState();
-  r.achievements.forEach((a: Achievement) => ui.push({ icon: a.icon, title: `Achievement: ${a.name}`, body: `${a.desc} +${a.xp} XP`, tone: "gold" }));
+  r.achievements.slice(0, 2).forEach((a: Achievement) => ui.push({ icon: a.icon, title: a.name, body: `${a.desc} +${a.xp} XP`, tone: "gold" }));
   if (r.beltUp) {
-    ui.celebrate({
-      kind: "belt",
-      title: `${r.beltUp.belt.name} Belt — ${r.beltUp.pos}`,
-      body: `Your ${r.beltUp.pos} play just ranked up. Keep your accuracy high to reach the next belt.`,
-      icon: "🥋",
-      belt: r.beltUp.belt,
-    });
+    ui.push({ icon: "🥋", title: `${r.beltUp.belt.name} belt · ${r.beltUp.pos}`, body: "This seat just ranked up.", tone: "gold" });
+    ui.burst();
   } else if (r.levelUp) {
-    ui.celebrate({ kind: "level", title: `Level ${r.levelUp}!`, body: "New level unlocked. Your training is compounding.", icon: "⭐" });
+    ui.push({ icon: "⭐", title: `Level ${r.levelUp}`, body: "Keep it going.", tone: "gold" });
+    ui.burst();
   }
 }

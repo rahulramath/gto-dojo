@@ -752,6 +752,11 @@ function bucketize(range: WCombo[], board: Card[], tex: Texture): Bucketed {
   return { combos, buckets, mix, total };
 }
 
+/** Share of a range in each strength bucket on a board (for lesson visuals). */
+export function rangeMix(w: Weights, board: Card[]): Record<Bucket, number> {
+  return bucketize(combosFromWeights(w, board), board, analyzeBoard(board)).mix;
+}
+
 function narrow(range: WCombo[], board: Card[], tex: Texture, ctx: Ctx, action: PostAction, t: Tendencies | null): WCombo[] {
   const bz = bucketize(range, board, tex);
   const out: WCombo[] = [];

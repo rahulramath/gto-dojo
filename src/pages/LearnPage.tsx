@@ -1,22 +1,14 @@
 import { useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, BookOpen, Check, ChevronDown, Lock, Play, Sparkles, Trophy } from "lucide-react";
+import { BookOpen, Check, ChevronDown, Play, X } from "lucide-react";
 import { DAY_BY_NUM, DAYS, GLOSSARY, PHASES, type Day } from "../data/curriculum";
+import { LEGEND_BY_ID } from "../data/legends";
 import { navigate, useRoute } from "../lib/router";
 import { useStore } from "../store/store";
 import { announce, useUi } from "../store/ui";
-import { BELTS } from "../lib/progression";
-import { BeltBadge, ProgressBar, SectionTitle, Segmented } from "../components/ui";
-import { LegendLens } from "../components/coach";
+import { BELTS, dojoBelt } from "../lib/progression";
+import { BeltBadge, ListRow, PageHeader, ProgressBar, Sheet } from "../components/ui";
+import { LessonVisual } from "../components/visuals";
 import { play } from "../lib/sound";
-import { pct } from "../lib/format";
-
-const DEEPER_COLOR: Record<string, string> = {
-  Example: "#38bdf8",
-  "The math": "#f2c14e",
-  "Common mistake": "#fb7185",
-  "Live exploit": "#fb923c",
-  "Pro tip": "#34d399",
-};
 
 function drillStatus(day: Day, drills: Record<string, { n: number; correct: number }>) {
   if (!day.drill) return { done: true, n: 0, acc: 0 };
@@ -25,330 +17,305 @@ function drillStatus(day: Day, drills: Record<string, { n: number; correct: numb
   return { done: d.n >= day.drill.target && acc >= day.drill.acc, n: d.n, acc };
 }
 
+type Step = { type: "idea"; idx: number } | { type: "quiz"; idx: number } | { type: "finish" };
+
+export function LessonView() {
+  const { params } = useRoute();
+  const day = DAY_BY_NUM[Number(params.get("day"))] ?? DAYS[0];
+  return <Lesson key={day.day} day={day} />;
+}
+
 function Lesson({ day }: { day: Day }) {
   const lessons = useStore((s) => s.lessons);
   const drills = useStore((s) => s.drills);
-  const [opened, setOpened] = useState<string[]>([]);
-  const [answers, setAnswers] = useState<(number | null)[]>(day.quiz.map(() => null));
-  const [revealed, setRevealed] = useState(1);
+  const quizBest = useStore((s) => s.quizBest);
+  const steps: Step[] = useMemo(
+    () => [...day.sections.map((_, idx) => ({ type: "idea" as const, idx })), ...day.quiz.map((_, idx) => ({ type: "quiz" as const, idx })), { type: "finish" as const }],
+    [day],
+  );
+  const alreadyPassed = (quizBest[day.day] ?? 0) >= 2;
+  const [i, setI] = useState(alreadyPassed ? steps.length - 1 : 0);
+  const [picked, setPicked] = useState<number | null>(null);
+  const [score, setScore] = useState(0);
+  const [more, setMore] = useState(false);
+  const step = steps[i];
   const done = !!lessons[day.day];
-  const phase = PHASES.find((p) => p.id === day.phase)!;
   const ds = drillStatus(day, drills);
-  const score = answers.filter((a, i) => a === day.quiz[i].answer).length;
-  const quizDone = answers.every((a) => a !== null);
-  const quizPass = quizDone && score >= 2;
+  const passed = alreadyPassed || score >= 2;
+  const phase = PHASES.find((p) => p.id === day.phase)!;
 
-  const complete = () => {
-    const r = useStore.getState().completeLesson(day.day, score);
-    announce(r);
-    play("level");
-    const boss = day.boss ? BELTS.find((b) => b.id === phase.belt) : null;
-    if (boss) useUi.getState().celebrate({ kind: "belt", title: `${boss.name} Belt earned!`, body: `You passed the Day ${day.day} exam. ${phase.name} complete.`, icon: "🥋", belt: boss });
-    else useUi.getState().burst();
+  const advance = () => {
+    if (step.type === "quiz" && step.idx === day.quiz.length - 1) useStore.getState().recordQuiz(day.day, score);
+    setPicked(null);
+    setMore(false);
+    setI((x) => Math.min(steps.length - 1, x + 1));
   };
 
+  const finish = () => {
+    const r = useStore.getState().completeLesson(day.day, Math.max(score, quizBest[day.day] ?? 0));
+    announce(r);
+    const belt = day.boss ? BELTS.find((b) => b.id === phase.belt) : null;
+    if (belt && !done) useUi.getState().celebrate({ kind: "belt", title: `${belt.name} belt earned`, body: `${phase.name} complete.`, icon: "🥋", belt });
+    else useUi.getState().burst();
+    play("level");
+    navigate("/learn");
+  };
+
+  const legend = day.legend ? LEGEND_BY_ID[day.legend] : undefined;
+
   return (
-    <div className="space-y-4">
-      <button className="inline-flex items-center gap-1 text-sm text-ink-300 hover:text-white" onClick={() => navigate("/learn")}>
-        <ArrowLeft size={16} /> All days
-      </button>
-      <div className="panel overflow-hidden">
-        <div className="bg-gradient-to-r from-felt-700/60 to-transparent p-5">
-          <div className="label">
-            Day {day.day} of 40 · {phase.name}
-            {day.boss && <span className="ml-2 rounded bg-gold-400/20 px-1.5 py-0.5 text-gold-200">Belt exam</span>}
-          </div>
-          <h1 className="mt-1 font-display text-2xl font-bold text-white sm:text-3xl">{day.title}</h1>
-          <p className="mt-1 text-ink-200">{day.goal}</p>
-          {done && (
-            <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-300">
-              <Check size={14} /> Completed
-            </div>
-          )}
-        </div>
+    <div className="mx-auto max-w-xl">
+      <div className="flex h-14 items-center gap-4">
+        <button className="icon-btn -ml-2" onClick={() => navigate("/learn")} aria-label="Close lesson">
+          <X size={24} />
+        </button>
+        <ProgressBar value={i / (steps.length - 1)} className="flex-1" />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <div className="space-y-3">
-          {day.sections.slice(0, revealed).map((s, i) => (
-            <div key={s.title} className="panel animate-fadeUp p-4">
-              <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gold-400 text-xs font-black text-ink-950">{i + 1}</span>
-                <h2 className="font-display text-lg font-bold text-white">{s.title}</h2>
+      <div key={i} className="animate-fadeUp pt-6">
+        {step.type === "idea" && (
+          <div className="space-y-6">
+            <div>
+              <div className="t-label">
+                Day {day.day} · Idea {step.idx + 1} of {day.sections.length}
               </div>
-              <p className="mt-2 text-sm leading-relaxed text-ink-100">{s.body}</p>
-              {s.deeper && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {s.deeper.map((d) => {
-                    const key = `${s.title}-${d.label}`;
-                    const on = opened.includes(key);
-                    return (
-                      <button
-                        key={key}
-                        onClick={() => setOpened((o) => (on ? o.filter((x) => x !== key) : [...o, key]))}
-                        className="chip"
-                        style={on ? { borderColor: `${DEEPER_COLOR[d.label]}88`, color: DEEPER_COLOR[d.label] } : undefined}
-                      >
-                        <ChevronDown size={12} className={on ? "rotate-180" : ""} /> {d.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              {s.deeper
-                ?.filter((d) => opened.includes(`${s.title}-${d.label}`))
-                .map((d) => (
-                  <div key={d.label} className="mt-2 animate-fadeUp rounded-lg border-l-2 bg-black/20 p-3 text-sm text-ink-200" style={{ borderColor: DEEPER_COLOR[d.label] }}>
-                    <div className="mb-0.5 text-xs font-bold" style={{ color: DEEPER_COLOR[d.label] }}>
-                      {d.label}
-                    </div>
-                    {d.body}
-                  </div>
-                ))}
+              <h1 className="t-headline mt-2">{day.sections[step.idx].title}</h1>
             </div>
-          ))}
-          {revealed < day.sections.length ? (
-            <button className="btn-ghost w-full" onClick={() => setRevealed((r) => r + 1)}>
-              Next idea ({revealed}/{day.sections.length}) <ArrowRight size={16} />
-            </button>
-          ) : (
-            <div className="panel p-4">
-              <div className="flex items-center justify-between">
-                <h2 className="font-display text-lg font-bold text-white">Check yourself</h2>
-                {quizDone && (
-                  <span className={`text-sm font-bold ${quizPass ? "text-emerald-300" : "text-rose-300"}`}>
-                    {score}/{day.quiz.length}
-                  </span>
+            {day.sections[step.idx].visual && (
+              <div className="card-flat flex justify-center">
+                <LessonVisual v={day.sections[step.idx].visual!} />
+              </div>
+            )}
+            <p className="text-base text-ink-100">{day.sections[step.idx].body}</p>
+            {day.sections[step.idx].more && (
+              <div>
+                {more ? (
+                  <p className="t-body animate-fadeUp rounded-xl bg-white/[0.04] p-4">{day.sections[step.idx].more}</p>
+                ) : (
+                  <button className="btn-text -ml-4" onClick={() => setMore(true)}>
+                    Go deeper
+                  </button>
                 )}
               </div>
-              <div className="mt-3 space-y-4">
-                {day.quiz.map((q, qi) => {
-                  const a = answers[qi];
-                  return (
-                    <div key={q.q}>
-                      <div className="text-sm font-semibold text-white">
-                        {qi + 1}. {q.q}
-                      </div>
-                      <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                        {q.options.map((o, oi) => {
-                          const picked = a === oi;
-                          const right = oi === q.answer;
-                          return (
-                            <button
-                              key={o}
-                              disabled={a !== null}
-                              onClick={() => {
-                                setAnswers((prev) => prev.map((x, i) => (i === qi ? oi : x)));
-                                play(right ? "good" : "bad");
-                              }}
-                              className={`rounded-lg border px-3 py-2 text-left text-xs transition ${
-                                a === null
-                                  ? "border-white/10 bg-white/[0.03] text-ink-100 hover:bg-white/[0.07]"
-                                  : right
-                                    ? "border-emerald-400/60 bg-emerald-500/15 text-emerald-100"
-                                    : picked
-                                      ? "border-rose-400/60 bg-rose-500/10 text-rose-100"
-                                      : "border-white/10 text-ink-400"
-                              }`}
-                            >
-                              {o}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      {a !== null && <p className="mt-1.5 text-xs text-ink-300">{q.explain}</p>}
-                    </div>
-                  );
-                })}
-              </div>
-              {quizDone && !quizPass && (
-                <button className="btn-ghost mt-3" onClick={() => setAnswers(day.quiz.map(() => null))}>
-                  Retry quiz
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-3">
-          {day.drill && (
-            <div className="panel p-4">
-              <div className="label mb-1">Today's drill</div>
-              <div className="font-semibold text-white">{day.drill.label}</div>
-              <div className="mt-1 text-xs text-ink-400">
-                Target: {day.drill.target} at {pct(day.drill.acc)}+ accuracy
-              </div>
-              <div className="mt-3">
-                <ProgressBar value={Math.min(1, ds.n / day.drill.target)} color={ds.done ? "#22c55e" : "#f2c14e"} />
-                <div className="num mt-1 text-xs text-ink-300">
-                  {Math.min(ds.n, day.drill.target)}/{day.drill.target} · {ds.n ? pct(ds.acc) : "—"} {ds.done && "· done ✓"}
-                </div>
-              </div>
-              <button
-                className="btn-primary mt-3 w-full"
-                onClick={() => {
-                  useStore.getState().resetDrill(`day-${day.day}`);
-                  navigate(day.drill!.url);
-                }}
-              >
-                <Play size={16} /> {ds.n ? "Restart drill" : "Start drill"}
-              </button>
-            </div>
-          )}
-          <div className="panel p-4">
-            <div className="label mb-2">Finish the day</div>
-            <ul className="space-y-1.5 text-sm">
-              <li className={`flex items-center gap-2 ${revealed >= day.sections.length ? "text-emerald-300" : "text-ink-300"}`}>
-                <Check size={14} /> Read all {day.sections.length} ideas
-              </li>
-              <li className={`flex items-center gap-2 ${quizPass ? "text-emerald-300" : "text-ink-300"}`}>
-                <Check size={14} /> Pass the quiz (2/3)
-              </li>
-              {day.drill && (
-                <li className={`flex items-center gap-2 ${ds.done ? "text-emerald-300" : "text-ink-300"}`}>
-                  <Check size={14} /> Complete the drill
-                </li>
-              )}
-            </ul>
-            <button className="btn-primary mt-3 w-full" disabled={!(quizPass && ds.done) && !done} onClick={complete}>
-              <Trophy size={16} /> {done ? "Completed — claim again" : day.boss ? "Claim your belt" : "Complete day"}
+            )}
+            <button className="btn-filled btn-lg w-full" onClick={advance}>
+              Continue
             </button>
           </div>
-          {day.legend && <LegendLens id={day.legend} line={day.goal} />}
-          <div className="flex justify-between">
-            {DAY_BY_NUM[day.day - 1] ? (
-              <button className="btn-ghost" onClick={() => navigate(`/learn?day=${day.day - 1}`)}>
-                <ArrowLeft size={16} /> Day {day.day - 1}
-              </button>
-            ) : (
-              <span />
-            )}
-            {DAY_BY_NUM[day.day + 1] && (
-              <button className="btn-ghost" onClick={() => navigate(`/learn?day=${day.day + 1}`)}>
-                Day {day.day + 1} <ArrowRight size={16} />
-              </button>
+        )}
+
+        {step.type === "quiz" && (
+          <div className="space-y-6">
+            <div>
+              <div className="t-label">
+                Quick check {step.idx + 1} of {day.quiz.length}
+              </div>
+              <h1 className="t-title-lg mt-2">{day.quiz[step.idx].q}</h1>
+            </div>
+            <div className="space-y-2">
+              {day.quiz[step.idx].options.map((o, k) => {
+                const q = day.quiz[step.idx];
+                const right = k === q.answer;
+                const isPicked = picked === k;
+                const cls =
+                  picked === null
+                    ? "border-white/10 hover:bg-white/[0.05]"
+                    : right
+                      ? "border-emerald-400 bg-emerald-500/15"
+                      : isPicked
+                        ? "border-rose-400 bg-rose-500/10"
+                        : "border-white/10 opacity-50";
+                return (
+                  <button
+                    key={o}
+                    disabled={picked !== null}
+                    onClick={() => {
+                      setPicked(k);
+                      if (right) setScore((s) => s + 1);
+                      play(right ? "perfect" : "bad");
+                    }}
+                    className={`flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl border px-4 text-left text-base font-medium text-ink-100 transition ${cls}`}
+                  >
+                    {o}
+                    {picked !== null && right && <Check size={20} className="shrink-0 text-emerald-400" />}
+                  </button>
+                );
+              })}
+            </div>
+            {picked !== null && (
+              <div className="animate-fadeUp space-y-6">
+                <p className={`t-body font-medium ${picked === day.quiz[step.idx].answer ? "text-emerald-300" : "text-rose-300"}`}>
+                  {picked === day.quiz[step.idx].answer ? "Correct. " : "Not quite. "}
+                  <span className="text-ink-200">{day.quiz[step.idx].explain}</span>
+                </p>
+                <button className="btn-filled btn-lg w-full" onClick={advance}>
+                  Continue
+                </button>
+              </div>
             )}
           </div>
-        </div>
+        )}
+
+        {step.type === "finish" && (
+          <div className="space-y-6">
+            {!passed ? (
+              <>
+                <h1 className="t-headline">Almost there</h1>
+                <p className="t-body">You got {score} of {day.quiz.length}. Review the ideas and try the questions again.</p>
+                <button
+                  className="btn-filled btn-lg w-full"
+                  onClick={() => {
+                    setScore(0);
+                    setI(0);
+                  }}
+                >
+                  Review the lesson
+                </button>
+              </>
+            ) : (
+              <>
+                <div>
+                  <div className="t-label">Day {day.day}</div>
+                  <h1 className="t-headline mt-2">{done ? "Day complete" : day.drill ? "Now put it into practice" : "Lesson learned"}</h1>
+                </div>
+                <div className="card !p-4">
+                  <ListRow icon={Check} tone="#22c55e" title="Learn" subtitle={`${day.sections.length} ideas · quiz passed`} trailing={<Check size={20} className="text-emerald-400" />} />
+                  {day.drill && (
+                    <ListRow
+                      icon={Play}
+                      tone={ds.done ? "#22c55e" : "#f2c14e"}
+                      title={day.drill.label}
+                      subtitle={ds.done ? "Passed" : `${day.drill.target} ${day.drill.url.startsWith("/math") ? "questions" : "decisions"} at ${Math.round(day.drill.acc * 100)}%${ds.n ? ` · last try ${Math.round(ds.acc * 100)}%` : ""}`}
+                      trailing={ds.done ? <Check size={20} className="text-emerald-400" /> : undefined}
+                    />
+                  )}
+                </div>
+                {day.drill && !ds.done ? (
+                  <button
+                    className="btn-filled btn-lg w-full"
+                    onClick={() => {
+                      useStore.getState().resetDrill(`day-${day.day}`);
+                      navigate(day.drill!.url);
+                    }}
+                  >
+                    Start practice
+                  </button>
+                ) : (
+                  <button className="btn-filled btn-lg w-full" onClick={finish}>
+                    {done ? "Back to path" : day.boss ? "Claim your belt" : "Finish day"}
+                  </button>
+                )}
+                <button className="btn-text w-full" onClick={() => setI(0)}>
+                  Review the lesson
+                </button>
+                {legend?.quote && (
+                  <div className="border-l-2 border-emerald-400/50 pl-4">
+                    <p className="t-body italic text-ink-100">“{legend.quote}”</p>
+                    <p className="t-label mt-1">{legend.name}</p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 export function LearnPage() {
-  const { params } = useRoute();
   const lessons = useStore((s) => s.lessons);
-  const [tab, setTab] = useState<"path" | "glossary">("path");
-  const dayNum = Number(params.get("day"));
-  const day = DAY_BY_NUM[dayNum];
   const next = useMemo(() => DAYS.find((d) => !lessons[d.day]) ?? DAYS[DAYS.length - 1], [lessons]);
   const doneCount = Object.keys(lessons).length;
-
-  if (day) return <Lesson key={day.day} day={day} />;
+  const belt = dojoBelt(lessons);
+  const [openPhase, setOpenPhase] = useState<number>(next.phase);
+  const [glossary, setGlossary] = useState(false);
 
   return (
-    <div>
-      <SectionTitle
-        eyebrow="The Pro Path"
-        title="40 days to a black belt"
-        desc="One focused lesson a day, a quiz to lock it in, and a drill graded against the baseline. Every sixth or seventh day is a belt exam."
-        right={
-          <Segmented
-            value={tab}
-            onChange={setTab}
-            options={[
-              { value: "path", label: "Path" },
-              { value: "glossary", label: "Glossary" },
-            ]}
-          />
-        }
-      />
+    <div className="space-y-6">
+      <PageHeader title="Learn" subtitle="40 short lessons, one idea at a time." />
 
-      {tab === "glossary" ? (
-        <div className="grid gap-3 sm:grid-cols-2">
+      <div className="card">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="t-label">Up next</div>
+            <div className="t-title-lg mt-1">
+              Day {next.day}: {next.title}
+            </div>
+            <div className="t-body mt-1 text-ink-300">{next.goal}</div>
+          </div>
+          <BeltBadge belt={belt} size="lg" />
+        </div>
+        <ProgressBar value={doneCount / 40} className="mt-6" />
+        <div className="t-label mt-2">
+          {doneCount} of 40 days · {belt.name} belt
+        </div>
+        <button className="btn-filled btn-lg mt-6 w-full sm:w-auto" onClick={() => navigate(`/lesson?day=${next.day}`)}>
+          {doneCount ? "Continue" : "Start Day 1"}
+        </button>
+      </div>
+
+      <div className="space-y-2">
+        {PHASES.map((ph) => {
+          const days = DAYS.filter((d) => d.phase === ph.id);
+          const phDone = days.filter((d) => lessons[d.day]).length;
+          const phaseBelt = BELTS.find((b) => b.id === ph.belt)!;
+          const isOpen = openPhase === ph.id;
+          return (
+            <div key={ph.id} className="card !p-0">
+              <button className="flex min-h-16 w-full items-center gap-4 px-4 text-left sm:px-6" onClick={() => setOpenPhase(isOpen ? 0 : ph.id)}>
+                <BeltBadge belt={phaseBelt} size="sm" />
+                <span className="min-w-0 flex-1">
+                  <span className="t-title block truncate">{ph.name}</span>
+                  <span className="t-label">
+                    Days {days[0].day}–{days[days.length - 1].day} · {phDone}/{days.length} done
+                  </span>
+                </span>
+                <ChevronDown size={20} className={`shrink-0 text-ink-400 transition ${isOpen ? "rotate-180" : ""}`} />
+              </button>
+              {isOpen && (
+                <div className="border-t border-white/[0.06] px-4 pb-2 sm:px-6">
+                  {days.map((d) => {
+                    const isDone = !!lessons[d.day];
+                    const isNext = d.day === next.day;
+                    return (
+                      <button key={d.day} onClick={() => navigate(`/lesson?day=${d.day}`)} className="flex min-h-14 w-full items-center gap-4 border-b border-white/[0.04] py-2 text-left last:border-0">
+                        <span
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                            isDone ? "bg-emerald-500 text-ink-950" : isNext ? "bg-gold-400 text-ink-950" : "bg-white/[0.06] text-ink-300"
+                          }`}
+                        >
+                          {isDone ? <Check size={16} strokeWidth={3} /> : d.day}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="t-body block truncate font-medium text-ink-100">{d.title}</span>
+                          <span className="t-label block truncate">{d.boss ? "Belt exam" : d.goal}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="card !py-2">
+        <ListRow icon={BookOpen} title="Glossary" subtitle="Key terms and formulas" onClick={() => setGlossary(true)} />
+      </div>
+
+      <Sheet open={glossary} onClose={() => setGlossary(false)} title="Glossary">
+        <div className="divide-y divide-white/[0.06]">
           {GLOSSARY.map((g) => (
-            <div key={g.term} className="panel p-4">
-              <div className="font-semibold text-white">{g.term}</div>
-              <p className="mt-1 text-sm text-ink-300">{g.def}</p>
-              {g.formula && <div className="mt-2 inline-block rounded bg-gold-400/10 px-2 py-0.5 font-mono text-xs text-gold-200">{g.formula}</div>}
+            <div key={g.term} className="py-4">
+              <div className="t-title">{g.term}</div>
+              <p className="t-body mt-1">{g.def}</p>
+              {g.formula && <div className="num mt-2 inline-block rounded-lg bg-gold-400/10 px-2 py-1 text-xs font-semibold text-gold-200">{g.formula}</div>}
             </div>
           ))}
         </div>
-      ) : (
-        <>
-          <div className="panel mb-4 flex flex-wrap items-center justify-between gap-3 p-4">
-            <div>
-              <div className="label">Up next</div>
-              <div className="font-display text-xl font-bold text-white">
-                Day {next.day}: {next.title}
-              </div>
-              <div className="text-sm text-ink-300">{next.goal}</div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <div className="num text-lg font-bold text-white">{doneCount}/40</div>
-                <div className="text-[11px] text-ink-400">days complete</div>
-              </div>
-              <button className="btn-primary" onClick={() => navigate(`/learn?day=${next.day}`)}>
-                <BookOpen size={16} /> Start Day {next.day}
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-5">
-            {PHASES.map((ph) => {
-              const days = DAYS.filter((d) => d.phase === ph.id);
-              const phDone = days.filter((d) => lessons[d.day]).length;
-              const belt = BELTS.find((b) => b.id === ph.belt)!;
-              return (
-                <div key={ph.id}>
-                  <div className="mb-2 flex flex-wrap items-center gap-3">
-                    <BeltBadge belt={belt} size="sm" />
-                    <h2 className="font-display text-lg font-bold text-white">
-                      Phase {ph.id}: {ph.name}
-                    </h2>
-                    <span className="text-xs text-ink-400">
-                      {phDone}/{days.length} · {ph.blurb}
-                    </span>
-                  </div>
-                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                    {days.map((d) => {
-                      const isDone = !!lessons[d.day];
-                      const isNext = d.day === next.day;
-                      return (
-                        <button
-                          key={d.day}
-                          onClick={() => navigate(`/learn?day=${d.day}`)}
-                          className={`panel-tight group flex items-start gap-3 p-3 text-left transition hover:border-white/20 ${isNext ? "ring-1 ring-gold-400/60" : ""}`}
-                        >
-                          <span
-                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-display text-sm font-bold ${
-                              isDone ? "bg-emerald-500/20 text-emerald-300" : d.boss ? "bg-gold-400/20 text-gold-300" : "bg-white/5 text-ink-200"
-                            }`}
-                          >
-                            {isDone ? <Check size={16} /> : d.boss ? "🥋" : d.day}
-                          </span>
-                          <span className="min-w-0">
-                            <span className="block text-[11px] font-semibold uppercase tracking-wider text-ink-400">
-                              Day {d.day} {isNext && <span className="text-gold-300">· next</span>}
-                            </span>
-                            <span className="block text-sm font-semibold text-white">{d.title}</span>
-                            <span className="line-clamp-2 block text-xs text-ink-400">{d.goal}</span>
-                          </span>
-                          {!isDone && d.day > next.day + 3 && <Lock size={12} className="ml-auto shrink-0 text-ink-500" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <p className="mt-6 flex items-center gap-2 text-xs text-ink-400">
-            <Sparkles size={14} className="text-gold-400" /> All days are open — skip ahead if you already know the basics. The lock just marks days you haven't reached yet.
-          </p>
-        </>
-      )}
+      </Sheet>
     </div>
   );
 }

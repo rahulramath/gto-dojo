@@ -17,7 +17,7 @@ export interface TableSeat {
 
 /**
  * Oval table. seats[0] is the hero (bottom center); the rest follow clockwise,
- * which is the direction action moves at a real table.
+ * the direction action moves at a real table.
  */
 export function PokerTable({
   seats,
@@ -25,35 +25,30 @@ export function PokerTable({
   pot,
   center,
   heroCards,
-  compact = false,
 }: {
   seats: TableSeat[];
   board?: Card[];
   pot?: string;
   center?: ReactNode;
   heroCards?: [Card, Card] | null;
-  compact?: boolean;
 }) {
   const n = seats.length;
   return (
-    <div className={`relative mx-auto w-full ${compact ? "max-w-[560px]" : "max-w-[760px]"}`}>
-      <div className="relative aspect-[1.55/1] w-full sm:aspect-[1.9/1]">
-        <div className="rail absolute inset-[4%] rounded-[999px] p-[1.6%] shadow-felt">
-          <div className="felt relative h-full w-full rounded-[999px] border border-black/40 shadow-[inset_0_0_0_2px_rgba(242,193,78,0.18)]">
-            <div className="absolute left-1/2 top-[16%] -translate-x-1/2 select-none font-display text-[10px] font-semibold uppercase tracking-[0.35em] text-white/15 sm:text-xs">
-              GTO Dojo
-            </div>
+    <div className="relative mx-auto w-full max-w-[680px]">
+      <div className="relative aspect-[1.6/1] w-full sm:aspect-[1.9/1]">
+        <div className="rail absolute inset-[5%] rounded-full p-[1.5%] shadow-felt">
+          <div className="felt relative h-full w-full rounded-full border border-black/40">
             <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
               {board.length > 0 && (
-                <div className="flex gap-1 sm:gap-1.5">
+                <div className="flex gap-1">
                   {board.map((c, i) => (
-                    <PlayingCard key={`${c}-${i}`} card={c} size={compact ? "sm" : "md"} delay={i * 80} />
+                    <PlayingCard key={`${c}-${i}`} card={c} size="sm" delay={i * 80} />
                   ))}
                 </div>
               )}
               {pot && (
-                <div className="rounded-full bg-black/45 px-3 py-0.5 text-xs font-semibold text-gold-200 ring-1 ring-gold-400/30 sm:text-sm">
-                  Pot <span className="num">{pot}</span>
+                <div className="num rounded-full bg-black/50 px-3 py-1 text-xs font-semibold text-gold-200">
+                  Pot {pot}
                 </div>
               )}
               {center}
@@ -62,63 +57,44 @@ export function PokerTable({
         </div>
 
         {seats.map((seat, i) => {
-          const theta = (Math.PI / 2) + (i * 2 * Math.PI) / n;
-          const x = 50 + 45 * Math.cos(theta);
-          const y = 50 + 42 * Math.sin(theta);
-          const bx = 50 + 29 * Math.cos(theta);
-          const by = 50 + 25 * Math.sin(theta);
+          const theta = Math.PI / 2 + (i * 2 * Math.PI) / n;
+          const x = 50 + 44 * Math.cos(theta);
+          const y = 50 + 41 * Math.sin(theta);
+          const bx = 50 + 28 * Math.cos(theta);
+          const by = 50 + 24 * Math.sin(theta);
           const isHero = seat.status === "hero";
           const folded = seat.status === "folded";
           return (
             <div key={seat.key}>
-              <div
-                className="absolute z-10 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
-                style={{ left: `${x}%`, top: `${y}%` }}
-              >
+              <div className="absolute z-10 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center" style={{ left: `${x}%`, top: `${y}%` }}>
                 {!isHero && seat.cards && seat.cards.length > 0 && (
-                  <div className="mb-[-10px] flex gap-0.5">
+                  <div className="mb-[-8px] flex gap-0.5">
                     {seat.cards.map((c, k) => (
                       <PlayingCard key={k} card={c} size="xs" />
                     ))}
                   </div>
                 )}
                 <div
-                  className={`relative min-w-[54px] rounded-xl border px-2 py-1 text-center shadow-lg transition sm:min-w-[72px] ${
-                    isHero
-                      ? "border-gold-400/80 bg-ink-800 ring-2 ring-gold-400/40"
-                      : seat.highlight
-                        ? "border-rose-400/70 bg-ink-800"
-                        : "border-white/10 bg-ink-850/95"
+                  className={`relative min-w-14 rounded-xl px-2 py-1 text-center ${
+                    isHero ? "bg-gold-400 text-ink-950" : seat.highlight ? "bg-ink-800 ring-2 ring-rose-400/70" : "bg-ink-850/95"
                   } ${folded ? "opacity-40" : ""}`}
                 >
                   {seat.badge && <span className="absolute -right-2 -top-2 text-base leading-none">{seat.badge}</span>}
-                  <div className={`font-display text-[11px] font-bold sm:text-xs ${isHero ? "text-gold-300" : "text-ink-100"}`}>
-                    {isHero ? `You · ${seat.label}` : seat.label}
-                  </div>
-                  {seat.stack && <div className="num text-[10px] text-ink-300 sm:text-[11px]">{seat.stack}</div>}
-                  {seat.action && !isHero && (
-                    <div
-                      className={`mt-0.5 rounded px-1 text-[9px] font-semibold uppercase tracking-wide sm:text-[10px] ${
-                        folded ? "text-ink-400" : "bg-white/10 text-white"
-                      }`}
-                    >
-                      {seat.action}
-                    </div>
+                  <div className={`text-xs font-bold ${isHero ? "text-ink-950" : "text-ink-100"}`}>{isHero ? `You · ${seat.label}` : seat.label}</div>
+                  {seat.action && !isHero && !folded ? (
+                    <div className="text-xs font-semibold text-gold-300">{seat.action}</div>
+                  ) : (
+                    seat.stack && <div className={`num text-xs ${isHero ? "text-ink-900/80" : "text-ink-300"}`}>{seat.stack}</div>
                   )}
                 </div>
                 {seat.isButton && (
-                  <div className="absolute -left-3 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[9px] font-black text-ink-950 shadow ring-2 ring-ink-900 sm:h-6 sm:w-6 sm:text-[10px]">
-                    D
-                  </div>
+                  <div className="absolute -left-3 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full bg-white text-xs font-bold text-ink-950 shadow">D</div>
                 )}
               </div>
               {seat.bet && (
-                <div
-                  className="absolute z-0 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full bg-black/50 px-1.5 py-0.5 text-[10px] font-semibold text-white ring-1 ring-white/10 sm:text-[11px]"
-                  style={{ left: `${bx}%`, top: `${by}%` }}
-                >
-                  <span className="inline-block h-2.5 w-2.5 rounded-full border border-white/60 bg-gradient-to-br from-rose-400 to-rose-700" />
-                  <span className="num">{seat.bet}</span>
+                <div className="num absolute z-0 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-xs font-semibold text-white" style={{ left: `${bx}%`, top: `${by}%` }}>
+                  <span className="inline-block h-2 w-2 rounded-full bg-rose-400" />
+                  {seat.bet}
                 </div>
               )}
             </div>
@@ -126,7 +102,7 @@ export function PokerTable({
         })}
       </div>
       {heroCards && (
-        <div className="mt-1 flex justify-center gap-2">
+        <div className="mt-2 flex justify-center gap-2">
           <PlayingCard card={heroCards[0]} size="lg" />
           <PlayingCard card={heroCards[1]} size="lg" delay={90} />
         </div>

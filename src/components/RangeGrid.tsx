@@ -93,7 +93,7 @@ export function RangeGrid({
             <span className="absolute inset-0" style={{ background: bg }} />
             {d === "miss" && <span className="absolute inset-0 ring-2 ring-inset ring-sky-300" />}
             {d === "extra" && <span className="absolute inset-0 bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.35)_0_2px,transparent_2px_5px)]" />}
-            <span className="pointer-events-none relative z-[1] flex h-full w-full items-center justify-center font-mono text-[7.5px] font-bold leading-none text-white/90 [text-shadow:0_1px_1px_rgba(0,0,0,0.7)] sm:text-[10px]">
+            <span className="pointer-events-none relative z-[1] flex h-full w-full items-center justify-center text-[9px] font-semibold leading-none tracking-tight text-white/90 [text-shadow:0_1px_1px_rgba(0,0,0,0.7)] sm:text-[11px]">
               {h}
             </span>
           </button>
@@ -103,12 +103,12 @@ export function RangeGrid({
   );
 }
 
-export function ActionLegend({ chart, compact = false }: { chart: Chart; compact?: boolean }) {
+export function ActionLegend({ chart }: { chart: Chart }) {
   return (
-    <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 ${compact ? "text-[11px]" : "text-xs"} text-ink-300`}>
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-300">
       {chart.actions.map((a) => (
-        <span key={a} className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-sm" style={{ background: a === chart.rest ? "rgba(255,255,255,0.08)" : ACTION_COLORS[a] }} />
+        <span key={a} className="inline-flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full" style={{ background: a === chart.rest ? "rgba(255,255,255,0.15)" : ACTION_COLORS[a] }} />
           {chart.labels[a] ?? a}
         </span>
       ))}

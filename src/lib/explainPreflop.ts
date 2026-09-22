@@ -192,7 +192,7 @@ function handFactors(f: HandFeatures): string[] {
   return out;
 }
 
-function reasonFor(spot: PreflopSpot, best: PfAction, f: HandFeatures): ReasonId {
+export function reasonFor(spot: PreflopSpot, best: PfAction, f: HandFeatures): ReasonId {
   const ip = heroIsIP(spot);
   const late = spot.hero === "CO" || spot.hero === "BTN" || spot.hero === "SB";
   switch (spot.kind) {

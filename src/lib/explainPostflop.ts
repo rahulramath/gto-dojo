@@ -48,7 +48,7 @@ function actionLabel(a: Analysis, k: PostAction, stake: Stake, units: Units): st
   return `${l.label} ${fmtMoney(k === "C" ? l.cost : l.to, stake, units)}`;
 }
 
-function reasonFor(a: Analysis, best: PostAction): ReasonId {
+export function reasonFor(a: Analysis, best: PostAction): ReasonId {
   const b = a.bucket;
   if (!a.facing) {
     if (best === "X") {
