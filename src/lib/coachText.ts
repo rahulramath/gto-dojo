@@ -98,8 +98,10 @@ function preWhy(c: PreCtx, a: PfAction): string {
       return `Your ${f.ace ? "ace" : RANK_NAMES[f.hi].toLowerCase()} blocks their best hands, so this ${verb} gets extra folds.`;
     case "fold-equity":
       return `${cap(c.vName)} folds often enough that a ${verb} profits right away.`;
-    case "price":
-      return c.eq !== null ? `You need ${pct(c.req)} equity and have ${pct(c.eq)} — a good price to call.` : "You're getting a great price to call.";
+    case "price": {
+      const have = c.realized ?? c.eq;
+      return have !== null && have >= c.req ? `You need ${pct(c.req)} equity and have about ${pct(have)} — a good price to call.` : "You're getting a good enough price, and it wins big when it hits.";
+    }
     case "set-mine":
       return "Small pairs want a cheap flop: you hit a set 1 in 8.5 times and win big.";
     case "position":
@@ -127,7 +129,10 @@ function preWhyNot(c: PreCtx, a: PfAction, best: PfAction): string {
   const f = features(hand);
   const bestLabel = c.label(best).toLowerCase();
   if (a === "fold") {
-    if (best === "call") return c.eq !== null ? `Too good to fold — you need ${pct(c.req)} and have ${pct(c.eq)}.` : "Too good to fold at this price.";
+    if (best === "call") {
+      const have = c.realized ?? c.eq;
+      return have !== null && have >= c.req ? `Too good to fold — you need ${pct(c.req)} and have about ${pct(have)}.` : "Too good to fold — it wins enough when it hits to justify the call.";
+    }
     const plays = 1 - c.freq("fold");
     return plays >= 0.95 ? `Too strong to fold — ${hand} is always a ${bestLabel} here.` : `Too strong to fold — the baseline plays ${hand} ${pct(plays)} of the time.`;
   }
