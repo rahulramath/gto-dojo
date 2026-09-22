@@ -1,0 +1,13 @@
+{
+  "name": "GTO Dojo — Poker Strategy Trainer",
+  "short_name": "GTO Dojo",
+  "description": "Train preflop and postflop poker strategy for every seat, with progressive reasoning and live-game exploits.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b100e",
+  "theme_color": "#0b100e",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
