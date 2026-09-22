@@ -474,11 +474,20 @@ export function preflopMath(
       const need = spot.toCallBB / (spot.potBB + spot.toCallBB);
       rows.push({ label: `Equity realization (${ip ? "in position" : "out of position"})`, value: `×${r.toFixed(2)}`, note: "suited/connected hands realize more" });
       rows.push({ label: "Realized equity", value: pct(realized, 1), highlight: true });
-      notes.push(
-        realized >= need
-          ? `Realized equity ${pct(realized, 1)} ≥ ${pct(need, 1)} needed, so continuing is at least break-even before considering 3-bets.`
-          : `Realized equity ${pct(realized, 1)} < ${pct(need, 1)} needed, so a flat call loses money; continue only as a 3-bet (with fold equity) or fold.`,
-      );
+      const chartCall = spot.chart.freqs[spot.hand].call ?? 0;
+      const behind = stake.stackBB - (spot.options.find((o) => o.key === "call")?.toBB ?? 0);
+      if (realized >= need) {
+        notes.push(`Realized equity ${pct(realized, 1)} ≥ ${pct(need, 1)} needed, so calling is at least break-even on direct odds.`);
+        if (chartCall < 0.3 && spot.chart.actions.includes("call"))
+          notes.push("The chart still mostly raises or folds: raw equity ignores reverse implied odds (dominated hands lose the big pots) and the extra value of raising.");
+      } else {
+        notes.push(`Realized equity ${pct(realized, 1)} < ${pct(need, 1)} needed on direct odds alone.`);
+        notes.push(
+          chartCall >= 0.3
+            ? `The chart still calls ${pct(chartCall)} of the time: with ${m(Math.max(0, behind))} behind, ${spot.hand} wins big pots when it hits (implied odds), which this simple estimate doesn't count. Direct odds are the floor, not the whole story.`
+            : "So a flat call loses money here; continue only as a raise (with fold equity) or fold.",
+        );
+      }
     }
   }
   rows.push({ label: "Your hand vs a random hand", value: `${f.equity.toFixed(1)}%` });

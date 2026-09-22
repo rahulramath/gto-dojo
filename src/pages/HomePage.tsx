@@ -112,7 +112,7 @@ export function HomePage() {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <section className="panel p-4">
           <h2 className="mb-3 font-display text-lg font-bold text-white">Today's training</h2>
           <div className="space-y-2">

@@ -16,6 +16,7 @@ import { actionPercents, type PfAction } from "../lib/chart";
 import { combosFromWeights, equityVsRange } from "../lib/equity";
 import { handName } from "../lib/cards";
 import { play } from "../lib/sound";
+import { revealOnMobile, toTopOnMobile } from "../lib/scroll";
 import type { ReasonId } from "../data/reasons";
 import { PokerTable, type TableSeat } from "../components/PokerTable";
 import { ActionLegend, RangeGrid, type GridMode } from "../components/RangeGrid";
@@ -112,6 +113,10 @@ export function PreflopTrainer() {
   const [showSetup, setShowSetup] = useState(false);
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1000));
   const ladderTouched = useRef(false);
+  const feedbackRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (outcome) revealOnMobile(feedbackRef.current);
+  }, [outcome]);
 
   const firstRender = useRef(true);
   useEffect(() => {
@@ -131,6 +136,7 @@ export function PreflopTrainer() {
     setSeed((s) => s + 1);
     setSpot(makeSpot());
     play("deal");
+    toTopOnMobile();
   }, [makeSpot]);
 
   const explain = useMemo(() => explainPreflop(spot, seed), [spot, seed]);
@@ -419,7 +425,7 @@ export function PreflopTrainer() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <div className="space-y-3">
           <div className="panel p-2 sm:p-4">
             <div className="mb-2 flex flex-wrap gap-1.5">
@@ -462,7 +468,7 @@ export function PreflopTrainer() {
           </div>
         </div>
 
-        <div className="space-y-3">
+        <div ref={feedbackRef} className="scroll-mt-16 space-y-3">
           {!outcome ? (
             <div className="panel space-y-3 p-4">
               <div>

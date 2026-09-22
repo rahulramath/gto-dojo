@@ -68,7 +68,7 @@ function Lesson({ day }: { day: Day }) {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div className="space-y-3">
           {day.sections.slice(0, revealed).map((s, i) => (
             <div key={s.title} className="panel animate-fadeUp p-4">

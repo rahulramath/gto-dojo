@@ -14,6 +14,7 @@ import { cardsPretty, classOf } from "../lib/cards";
 import { fmtMoney, pct } from "../lib/format";
 import { randomSeed } from "../lib/rng";
 import { play } from "../lib/sound";
+import { revealOnMobile, toTopOnMobile } from "../lib/scroll";
 import type { ReasonId } from "../data/reasons";
 import { PokerTable, type TableSeat } from "../components/PokerTable";
 import { PlayingCard } from "../components/PlayingCard";
@@ -202,11 +203,18 @@ export function PostflopTrainer() {
     [arch.id, conf, hand, mission, review, settings.lens],
   );
 
+  const feedbackRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (review) revealOnMobile(feedbackRef.current);
+  }, [review]);
+
   const cont = useCallback(() => {
     setReview(null);
     setConf("think");
     play("deal");
-  }, []);
+    if (hand.done) setTimeout(() => revealOnMobile(feedbackRef.current), 50);
+    else toTopOnMobile();
+  }, [hand.done]);
 
   const nextHand = useCallback(() => {
     setReview(null);
@@ -214,6 +222,7 @@ export function PostflopTrainer() {
     setSrsKey(null);
     setHand(deal());
     play("deal");
+    toTopOnMobile();
   }, [deal]);
 
   useEffect(() => {
@@ -457,7 +466,7 @@ export function PostflopTrainer() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <div className="space-y-3">
           <div className="panel p-2 sm:p-4">
             <PokerTable
@@ -511,7 +520,7 @@ export function PostflopTrainer() {
           </div>
         </div>
 
-        <div className="space-y-3">
+        <div ref={feedbackRef} className="scroll-mt-16 space-y-3">
           {review && d && explain ? (
             <>
               <VerdictCard

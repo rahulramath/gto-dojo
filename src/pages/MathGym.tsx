@@ -506,7 +506,7 @@ export function MathGym() {
         })}
       </div>
       <h2 className="mb-3 mt-8 font-display text-xl font-bold text-white">Calculators</h2>
-      <div className="grid gap-3 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <PotCalc />
         <EquityCalc />
         <OutsCalc />

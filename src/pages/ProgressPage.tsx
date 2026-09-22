@@ -148,7 +148,7 @@ export function ProgressPage() {
         </div>
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <section className="panel p-4">
           <h2 className="font-display text-lg font-bold text-white">Leak finder</h2>
           <p className="mb-3 text-xs text-ink-400">Compares how often you take each action with how often the baseline would, spot by spot.</p>
@@ -203,7 +203,7 @@ export function ProgressPage() {
         </section>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <section className="panel p-4">
           <h2 className="font-display text-lg font-bold text-white">Mistake heatmap</h2>
           <p className="mb-3 text-xs text-ink-400">Preflop hands you get wrong most often (red = frequent mistakes).</p>
