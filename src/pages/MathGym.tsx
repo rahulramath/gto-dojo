@@ -15,8 +15,8 @@ const DRILLS: { id: DrillId; name: string; desc: string; icon: typeof Percent; t
   { id: "potodds", name: "Pot odds", desc: "What equity does this call need?", icon: Percent, tone: "#f2c14e" },
   { id: "outs", name: "Count the outs", desc: "Read a draw in seconds", icon: Crosshair, tone: "#38bdf8" },
   { id: "combos", name: "Combos", desc: "Count hands and blockers", icon: Layers, tone: "#a78bfa" },
-  { id: "equity", name: "Equity instinct", desc: "Who's ahead preflop, and by how much?", icon: Dices, tone: "#22c55e" },
-  { id: "mdf", name: "Defense & bluffs", desc: "How often to defend or bluff", icon: Gauge, tone: "#fb923c" },
+  { id: "equity", name: "Who's ahead", desc: "Guess who's ahead preflop, and by how much", icon: Dices, tone: "#22c55e" },
+  { id: "mdf", name: "Defense and bluffs", desc: "How often to defend or bluff", icon: Gauge, tone: "#fb923c" },
   { id: "ev", name: "Bluff EV", desc: "Does this bluff make money?", icon: Sigma, tone: "#f87171" },
 ];
 
@@ -103,9 +103,11 @@ function MathSession({ id, day, onExit }: { id: DrillId; day: number | null; onE
           <span className="t-label">
             Question {i + 1} of {questions.length}
           </span>
-          <span className={`num t-label flex items-center gap-1 ${timeLeft <= 5 && picked === null ? "text-rose-300" : ""}`}>
-            <Timer size={16} /> {picked === null ? `${timeLeft}s` : "—"}
-          </span>
+          {picked === null && (
+            <span className={`num t-label flex items-center gap-1 ${timeLeft <= 5 ? "text-rose-300" : ""}`}>
+              <Timer size={16} /> {timeLeft}s
+            </span>
+          )}
         </div>
         <h1 className="t-title-lg">{q.prompt}</h1>
         {q.cards && (
@@ -182,7 +184,7 @@ export function MathGym() {
       </div>
       <div className="space-y-8 pt-6">
         <div>
-          <h1 className="t-headline">Make the math automatic</h1>
+          <h1 className="t-headline">Get fast at poker math</h1>
           <p className="t-body mt-1 text-ink-300">10 questions, 15 seconds each.</p>
         </div>
         <section className="card !py-2">

@@ -21,7 +21,7 @@ export const cardsPretty = (cs: readonly Card[]): string => cs.map(cardPretty).j
 export function parseCard(s: string): Card {
   const r = RANK_CHARS.indexOf(s[0].toUpperCase());
   const su = SUIT_CHARS.indexOf(s[1].toLowerCase());
-  if (r < 0 || su < 0) throw new Error(`Bad card: ${s}`);
+  if (r < 0 || su < 0) throw new Error(`"${s}" isn't a card. Try something like Ah or Td.`);
   return makeCard(r, su);
 }
 

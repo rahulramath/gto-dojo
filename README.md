@@ -1,43 +1,43 @@
 # GTO Dojo
 
-Short daily poker sessions for every seat — with clear, one-line answers to *why a move is right* and *why yours wasn't*. Built for live **$1/$2** and **$2/$5** players, with a solver-style baseline and exploit tips.
+Short daily poker sessions for every seat. Play a hand, and you'll see right away why your move was right or what to do instead. It's built for live $1/$2 and $2/$5 players, with solver-style charts and tips for beating real opponents.
 
-**Live:** https://rahulramath.github.io/gto-dojo/
+**Try it:** https://rahulramath.github.io/gto-dojo/
 
-## The loop
+## How a session works
 
-1. **Start today's session** — 10 hands picked for you: your due mistakes first, then extra reps on your weakest seat.
-2. **Make your move** — fold, call, raise (or check and bet sizes postflop). Stuck? Tap *Need a hint?*
-3. **Get the verdict** — a single headline (*"Fold was better"*), one line on why your play was wrong, one line on why the better play is right, and one visual as proof: the range chart with your hand highlighted, a price meter (equity needed vs equity you have), or a strength meter.
-4. **Go deeper only if you want** — *Why not call?* questions open one at a time; *Learn more* holds the full chart, the numbers, the exploit, and the idea behind it.
-5. **See your results** — score, XP, streak, and a *What to fix* list. Misses come back in *Fix your mistakes* at growing intervals.
+1. **Start today's session.** You get 10 hands picked for you, starting with hands you missed before and extra practice in your weakest seat.
+2. **Make your move.** Fold, call or raise before the flop, or check and bet after it. Stuck? Tap *Need a hint?*
+3. **See the answer.** You get a headline like *"Nice fold"* or *"This one's a raise"*, a sentence on the problem with your play, a sentence on why the better play works, and one picture that shows it: the range chart with your hand highlighted, a meter comparing the equity you need to the equity you have, or a hand strength meter.
+4. **Dig in only if you want to.** Questions like *"What about calling?"* open one at a time. *Learn more* has the full chart, the numbers, how to beat this type of player and the idea behind the spot.
+5. **Check your results.** You see your score, XP, streak and a *What to fix* list. Hands you miss come back later in *Fix your mistakes* until you get them right.
 
-Plus a **Daily Challenge** (the same 10 hands for everyone, with a shareable result), **postflop hands** played flop to river, and **math drills** with a 15-second timer.
+There's also a **Daily Challenge** with the same 10 hands for everyone and a result you can share, **postflop hands** you play from flop to river, and **math drills** against a 15-second clock.
 
-## Learn
+## Lessons
 
-A 40-day path in six phases, each ending in a belt exam. Every lesson is a short stepper: one idea per screen with a visual (seat map, open ranges, combos, pot odds, outs, board textures, range advantage, bluff ratios…), three quick questions, then a practice session.
+A 40-day path in six phases, each ending with a belt exam. Every lesson shows one idea per screen with a picture (seat map, opening ranges, combos, pot odds, outs, board textures, bluff ratios and more), then three quick questions and a practice session.
 
-## Design system
+## Design
 
-- Four destinations: **Train, Learn, Charts, Me**. Sessions and lessons run in a distraction-free focus mode.
-- Five type roles only (24 / 20 / 16 / 14 / 12, Inter), an 8-point spacing grid, pill buttons, bottom sheets on mobile and dialogs on desktop.
+- Four tabs: **Train, Learn, Charts, Me**. Sessions and lessons open full screen so you can focus.
+- Five text sizes (24, 20, 16, 14 and 12), Inter throughout, an 8-point spacing grid, pill buttons, and sheets that slide up on phones.
 
 ## How grading works
 
-- **Preflop baselines** are solver-approximated 100bb cash strategies (2.5bb opens, 3bb from the small blind, rake-aware), rounded into learnable frequencies for 6-max and full ring.
-- **Live limper charts** are exploitative coaching heuristics for loose live games.
-- **Postflop** uses a solver-inspired model: every combo in both ranges is classified on the board, texture and range/nut advantage pick a strategy, and ranges narrow after each action. Equities are Monte Carlo simulations run in the browser.
+- **Preflop** answers come from solver-style strategies for 100 big blind cash games (2.5bb opens, 3bb from the small blind), rounded into ranges you can actually learn for 6-max and full ring.
+- **Limper charts** are built for loose live games rather than from a solver.
+- **Postflop** uses a model inspired by solvers. It sorts every hand in both ranges on the board, picks a strategy from the board and who has the edge, and narrows the ranges after each action. Equity is simulated right in your browser.
 
-It's a training model, not a live solver.
+It's a training tool, not a live solver.
 
-## Develop
+## Run it locally
 
 ```bash
 npm install
 npm run dev      # http://localhost:5173
-npm test         # engine, chart data and coaching copy tests
+npm test         # engine, chart data and copy tests
 npm run build    # production build in dist/
 ```
 
-Progress is stored in `localStorage` (export/import from Me → Settings). Pushing to `main` tests, builds and deploys to GitHub Pages.
+Your progress is saved in your browser. You can export or import it from Me, under Settings. Every push to `main` runs the tests, builds the app and deploys it to GitHub Pages.

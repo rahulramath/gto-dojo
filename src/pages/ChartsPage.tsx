@@ -13,10 +13,10 @@ import { announce } from "../store/ui";
 import { play } from "../lib/sound";
 
 const KINDS: { id: ChartKind; label: string }[] = [
-  { id: "rfi", label: "Opens" },
-  { id: "vsOpen", label: "vs Raise" },
-  { id: "vs3bet", label: "vs 3-Bet" },
-  { id: "vs4bet", label: "vs 4-Bet" },
+  { id: "rfi", label: "Opening" },
+  { id: "vsOpen", label: "Facing a raise" },
+  { id: "vs3bet", label: "Facing a 3-bet" },
+  { id: "vs4bet", label: "Facing a 4-bet" },
   { id: "vsLimp", label: "Limpers" },
 ];
 
@@ -32,11 +32,9 @@ function handLine(chart: Chart, h: HandClass): string {
   const main = primaryAction(chart, h);
   const mf = chart.freqs[h][main] ?? 0;
   const label = (chart.labels[main] ?? main).toLowerCase();
-  if (mf >= 0.95) {
-    if (main === chart.rest) return f.dominated ? `Always ${label} — often dominated by better kickers.` : `Always ${label} — below this range.`;
-    return f.category === "premium" ? `Always ${label} — a premium hand.` : `Always ${label} — solidly inside this range.`;
-  }
-  return "A mixed hand — it sits on the edge of the range, so it's played more than one way.";
+  if (mf < 0.95) return "It's on the edge of the range, so you play it more than one way.";
+  if (main === chart.rest) return f.dominated ? `You always ${label} this. Better kickers dominate it.` : `You always ${label} this. It's outside the range.`;
+  return f.category === "premium" ? `You always ${label} this. It's one of the best hands.` : `You always ${label} this. It's well inside the range.`;
 }
 
 export function ChartsPage() {
@@ -184,7 +182,7 @@ export function ChartsPage() {
               {checked ? (
                 <div className="flex flex-wrap items-center gap-4">
                   <span className="num text-2xl font-bold text-gold-300">{checked.score}%</span>
-                  <span className="t-label flex-1">Blue outline = missed · striped = shouldn't be there</span>
+                  <span className="t-label flex-1">Blue outline means you missed it. Stripes mean it shouldn't be there.</span>
                   <button
                     className="btn-outline"
                     onClick={() => {
@@ -228,7 +226,7 @@ export function ChartsPage() {
                 <ActionLegend chart={chart} />
               </div>
               <div className="border-t border-white/[0.06] pt-2">
-                <Switch checked={mixes} onChange={setMixes} label="Show mixed frequencies" hint="See hands that are played more than one way." />
+                <Switch checked={mixes} onChange={setMixes} label="Show mixed hands" hint="Split squares are hands you play more than one way." />
               </div>
             </>
           )}
@@ -248,8 +246,8 @@ export function ChartsPage() {
             ) : (
               <div>
                 <div className="t-title">Key idea</div>
-                <p className="t-body mt-2">{chart.notes?.[0] ?? "Tap any hand to see how often it's played."}</p>
-                {chart.source === "live" && <p className="t-label mt-2 text-amber-200">Live exploit chart for loose games.</p>}
+                <p className="t-body mt-2">{chart.notes?.[0] ?? "Tap any hand to see how often you play it."}</p>
+                {chart.source === "live" && <p className="t-label mt-2 text-amber-200">Built for loose live games rather than from a solver.</p>}
               </div>
             )}
           </div>

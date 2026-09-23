@@ -83,31 +83,31 @@ export function analyzeBoard(board: readonly Card[]): Texture {
         : high === 10
           ? "Queen-high"
           : broadways >= 2
-            ? "Broadway"
+            ? "Big cards"
             : high >= 7
-              ? "Middling"
-              : "Low";
+              ? "Middle cards"
+              : "Low cards";
 
   let label: string;
-  if (trips) label = "Trips on board";
-  else if (paired) label = `Paired, ${highLabel.toLowerCase()}`;
-  else if (monotone && street === "flop") label = `Monotone, ${highLabel.toLowerCase()}`;
-  else if (wetness >= 0.62) label = `Wet & connected, ${highLabel.toLowerCase()}`;
-  else if (wetness >= 0.35) label = `Semi-wet, ${highLabel.toLowerCase()}`;
+  if (trips) label = "Trips on the board";
+  else if (paired) label = `Paired board, ${highLabel.toLowerCase()}`;
+  else if (monotone && street === "flop") label = `One suit, ${highLabel.toLowerCase()}`;
+  else if (wetness >= 0.62) label = `Wet and connected, ${highLabel.toLowerCase()}`;
+  else if (wetness >= 0.35) label = `A bit wet, ${highLabel.toLowerCase()}`;
   else label = `Dry, ${highLabel.toLowerCase()}`;
 
   const notes: string[] = [];
-  if (fourFlush) notes.push("Four to a flush on board — any single card of that suit makes a flush.");
-  else if (flushPossible) notes.push(street === "flop" ? "Monotone: flushes are already possible and draws are everywhere." : "Three to a flush on board — flushes are possible.");
-  else if (twoTone && street !== "river") notes.push("Two-tone: flush draws are possible.");
-  else if (rainbow) notes.push("Rainbow: no flush draws.");
-  if (fourStraight) notes.push("Four to a straight — one card makes a straight.");
+  if (fourFlush) notes.push("There are four of one suit out there, so any card of that suit makes a flush.");
+  else if (flushPossible) notes.push(street === "flop" ? "It's all one suit, so flushes are already possible and draws are everywhere." : "Three cards share a suit, so flushes are possible.");
+  else if (twoTone && street !== "river") notes.push("Two cards share a suit, so flush draws are possible.");
+  else if (rainbow) notes.push("Three different suits, so nobody has a flush draw.");
+  if (fourStraight) notes.push("Four cards line up, so one card makes a straight.");
   else if (straightPossible) notes.push("Straights are possible.");
   else if (connectedness >= 0.3) notes.push("Some straight draws are possible.");
-  if (paired) notes.push("Paired board: fewer strong combinations exist, so ranges are less polarized.");
+  if (paired) notes.push("On a paired board, strong hands like sets are rarer for both players.");
   if (high >= 11 && !paired && connectedness < 0.4)
-    notes.push(`${RANK_NAMES[high]}-high and static: the preflop raiser has more big cards and overpairs.`);
-  if (high <= 8 && connectedness >= 0.5) notes.push("Low and connected: the caller's range (suited connectors, small pairs) hits this hard.");
+    notes.push(`${RANK_NAMES[high]}-high and dry. The preflop raiser has more big cards and overpairs here.`);
+  if (high <= 8 && connectedness >= 0.5) notes.push("Low and connected. The caller's suited connectors and small pairs hit this hard.");
 
   return {
     street,

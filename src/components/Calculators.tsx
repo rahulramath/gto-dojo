@@ -32,10 +32,10 @@ export function PotCalc() {
         </label>
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <Result label="Equity to call" value={pct(bet / (pot + 2 * bet), 1)} note="call ÷ (pot + 2 × bet)" />
+        <Result label="Equity you need to call" value={pct(bet / (pot + 2 * bet), 1)} note="call ÷ (pot + 2 × bet)" />
         <Result label="Minimum defense" value={pct(pot / (pot + bet), 1)} note="pot ÷ (pot + bet)" />
-        <Result label="Bluff break-even" value={pct(bet / (pot + bet), 1)} note="bet ÷ (pot + bet)" />
-        <Result label="Balanced bluff share" value={pct(bet / (pot + 2 * bet), 1)} note="bet ÷ (pot + 2 × bet)" />
+        <Result label="Folds a bluff needs" value={pct(bet / (pot + bet), 1)} note="bet ÷ (pot + bet)" />
+        <Result label="Bluffs in a balanced bet" value={pct(bet / (pot + 2 * bet), 1)} note="bet ÷ (pot + 2 × bet)" />
       </div>
     </div>
   );
@@ -51,16 +51,16 @@ export function EquityCalc() {
       const h = parseCards(hero);
       if (h.length !== 2) throw new Error("Enter two cards, like AhKh.");
       const b = board.trim() ? parseCards(board) : [];
-      if (b.length > 5 || b.length === 1 || b.length === 2) throw new Error("Board must be 0, 3, 4 or 5 cards.");
+      if (b.length > 5 || b.length === 1 || b.length === 2) throw new Error("The board needs 0, 3, 4 or 5 cards.");
       const all = [...h, ...b];
-      if (new Set(all).size !== all.length) throw new Error("Duplicate cards.");
+      if (new Set(all).size !== all.length) throw new Error("One of those cards is used twice.");
       const vCards = villain.replace(/[\s,]/g, "");
       const eq = /^([2-9TJQKA][shdc]){2}$/i.test(vCards)
         ? handVsHand(h as [Card, Card], parseCards(vCards) as [Card, Card], b, 20000).equity
         : equityVsRange(h as [Card, Card], b, combosFromWeights(parseWeights(villain)), 20000).equity;
       setRes({ eq });
     } catch (e) {
-      setRes({ eq: 0, err: e instanceof Error ? e.message : "Invalid input" });
+      setRes({ eq: 0, err: e instanceof Error ? e.message : "Something doesn't look right. Check the cards." });
     }
   };
   return (
@@ -70,7 +70,7 @@ export function EquityCalc() {
         <input value={hero} onChange={(e) => setHero(e.target.value)} className={inputCls} />
       </label>
       <label className="t-label block">
-        Opponent hand or range (e.g. QQ+, AK)
+        Their hand or range, like QQ+, AK
         <input value={villain} onChange={(e) => setVillain(e.target.value)} className={inputCls} />
       </label>
       <label className="t-label block">
@@ -100,8 +100,8 @@ export function OutsCalc() {
       </div>
       <input type="range" min={1} max={20} value={outs} onChange={(e) => setOuts(Number(e.target.value))} className="w-full accent-[#f2c14e]" />
       <div className="grid grid-cols-2 gap-2">
-        <Result label="Next card" value={pct(outs / 47, 1)} note={`rule of 2: ~${outs * 2}%`} />
-        <Result label="By the river" value={pct(byRiver, 1)} note={`rule of 4: ~${Math.min(100, outs * 4)}%`} />
+        <Result label="Next card" value={pct(outs / 47, 1)} note={`The rule of 2 says about ${outs * 2}%`} />
+        <Result label="By the river" value={pct(byRiver, 1)} note={`The rule of 4 says about ${Math.min(100, outs * 4)}%`} />
       </div>
     </div>
   );

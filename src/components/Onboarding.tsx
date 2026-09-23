@@ -41,8 +41,8 @@ export function Onboarding() {
             </div>
             <ul className="space-y-4">
               {[
-                { icon: Target, c: "#f2c14e", t: "Play a hand, get an instant verdict" },
-                { icon: Brain, c: "#a78bfa", t: "See why in one line — tap for more" },
+                { icon: Target, c: "#f2c14e", t: "Play a hand and find out right away if you got it" },
+                { icon: Brain, c: "#a78bfa", t: "Get the reason in a sentence, and tap for more" },
                 { icon: Trophy, c: "#22c55e", t: "Earn a belt for every seat" },
               ].map(({ icon: Icon, c, t }) => (
                 <li key={t} className="flex items-center gap-4">
@@ -83,7 +83,7 @@ export function Onboarding() {
           <div className="space-y-6">
             <div>
               <div className="t-label">2 of 2</div>
-              <h2 className="t-title-lg mt-1">How much do you know?</h2>
+              <h2 className="t-title-lg mt-1">How much strategy do you know?</h2>
             </div>
             <div className="space-y-2">
               {LEVELS.map((l) => (

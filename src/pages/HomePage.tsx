@@ -33,7 +33,7 @@ export function HomePage() {
       <div className="grid grid-cols-3 gap-2">
         <StatTile icon={Flame} color="#fb923c" label="Streak" value={s.streak.current} />
         <StatTile icon={Target} color="#22c55e" label="Today" value={`${Math.min(sessionsToday, 1)}/1`} />
-        <StatTile icon={Trophy} label={`Level ${lv.level}`} value={s.xp} />
+        <StatTile icon={Trophy} label="Level" value={lv.level} />
       </div>
 
       <div className="card relative overflow-hidden">
@@ -42,8 +42,8 @@ export function HomePage() {
           <div className="t-label text-gold-300">Today's session</div>
           <h2 className="t-title-lg mt-1">10 hands, picked for you</h2>
           <p className="t-body mt-1 text-ink-300">
-            {dueCount ? `Starts with ${Math.min(3, dueCount)} ${Math.min(3, dueCount) === 1 ? "mistake" : "mistakes"} to fix` : "Mixed spots from every seat"}
-            {weakSeat ? ` · extra practice on ${posLabel(weakSeat, 6)}` : ""}
+            {dueCount ? `Starts with ${Math.min(3, dueCount)} ${Math.min(3, dueCount) === 1 ? "hand" : "hands"} you missed` : "Mixed spots from every seat"}
+            {weakSeat ? `, plus extra ${posLabel(weakSeat, 6)} practice` : ""}
           </p>
           <button className="btn-filled btn-lg mt-6 w-full sm:w-auto" onClick={() => navigate("/preflop?mode=today")}>
             {sessionsToday ? "Train again" : "Start session"}
@@ -74,7 +74,7 @@ export function HomePage() {
             icon={RotateCcw}
             tone="#f87171"
             title="Fix your mistakes"
-            subtitle={dueCount ? `${dueCount} ready to review` : "Nothing due — nice"}
+            subtitle={dueCount ? `${dueCount} ready to review` : "You're all caught up"}
             trailing={
               <button className="btn-tonal" disabled={!due.some((c) => c.mode === "pre")} onClick={() => navigate("/review")}>
                 Review
@@ -89,7 +89,7 @@ export function HomePage() {
         <div className="card !py-2">
           <ListRow icon={Spade} title="Preflop" subtitle="Open, defend and 3-bet from every seat" onClick={() => navigate("/preflop")} />
           <ListRow icon={Swords} tone="#a78bfa" title="Postflop" subtitle="Play hands from flop to river" onClick={() => navigate("/postflop")} />
-          <ListRow icon={Calculator} tone="#22c55e" title="Math" subtitle="Pot odds, outs and combos in 15 seconds" onClick={() => navigate("/math")} />
+          <ListRow icon={Calculator} tone="#22c55e" title="Math" subtitle="Pot odds, outs and combos against the clock" onClick={() => navigate("/math")} />
         </div>
       </section>
 

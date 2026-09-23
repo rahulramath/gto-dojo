@@ -8,22 +8,12 @@ export const BUCKETS: Bucket[] = ["nutted", "strong", "medium", "weak", "drawStr
 
 export const BUCKET_LABEL: Record<Bucket, string> = {
   nutted: "Monster",
-  strong: "Strong value",
-  medium: "Medium strength",
-  weak: "Weak showdown value",
-  drawStrong: "Strong draw",
-  drawWeak: "Weak draw",
-  air: "Air",
-};
-
-export const BUCKET_BLURB: Record<Bucket, string> = {
-  nutted: "Near the top of your range. You want to build a big pot, but can afford to slow-play sometimes.",
-  strong: "A clear value hand that beats most of what calls, but can still be outdrawn or beaten by monsters.",
-  medium: "Good enough to win at showdown fairly often, not strong enough to get three streets of value. Pot control territory.",
-  weak: "Some showdown value, but it rarely wins against a bet. Usually checks and gives up to pressure.",
-  drawStrong: "Not a made hand yet, but lots of outs (8+). Great semi-bluff candidate: it can win now or improve later.",
-  drawWeak: "A few outs or backdoor potential. Works as a cheap bluff sometimes, otherwise gives up.",
-  air: "No pair, no real draw. Only wins by making the other player fold.",
+  strong: "Strong hand",
+  medium: "Medium hand",
+  weak: "Weak hand",
+  drawStrong: "Big draw",
+  drawWeak: "Small draw",
+  air: "Nothing yet",
 };
 
 export const BUCKET_COLOR: Record<Bucket, string> = {

@@ -9,7 +9,7 @@ import { pct } from "./format";
 import { GRADES, type Grade } from "./grading";
 import { BUCKET_LABEL, type Bucket } from "./handStrength";
 import { features } from "./handStats";
-import { ACTION_NAMES, type Analysis, type PostAction } from "./postflop";
+import type { Analysis, PostAction } from "./postflop";
 import type { ExploitVerdict, PreflopSpot } from "./preflop";
 import { weightsPercent } from "./ranges";
 import { mulberry32 } from "./rng";
@@ -35,6 +35,46 @@ export interface Coach {
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const article = (noun: string) => (/^[aeiou]/.test(noun) ? "an" : "a");
+const plural = (rank: string) => (rank === "six" ? "sixes" : `${rank}s`);
+
+/** How we talk about each play: "Nice fold", "What about calling?", "then raise". */
+interface Words {
+  noun: string;
+  gerund: string;
+  verb: string;
+}
+
+const PRE_WORDS: Record<string, Words> = {
+  fold: { noun: "fold", gerund: "folding", verb: "fold" },
+  call: { noun: "call", gerund: "calling", verb: "call" },
+  limp: { noun: "limp", gerund: "limping", verb: "limp" },
+  "over-limp": { noun: "over-limp", gerund: "limping behind", verb: "limp behind" },
+  complete: { noun: "limp", gerund: "completing", verb: "complete" },
+  check: { noun: "check", gerund: "checking", verb: "check" },
+  raise: { noun: "raise", gerund: "raising", verb: "raise" },
+  "iso-raise": { noun: "iso-raise", gerund: "iso-raising", verb: "raise" },
+  "3-bet": { noun: "3-bet", gerund: "3-betting", verb: "3-bet" },
+  "4-bet": { noun: "4-bet", gerund: "4-betting", verb: "4-bet" },
+  "all-in": { noun: "shove", gerund: "going all-in", verb: "get it all in" },
+};
+
+const POST_WORDS: Record<PostAction, Words> = {
+  X: { noun: "check", gerund: "checking", verb: "check" },
+  C: { noun: "call", gerund: "calling", verb: "call" },
+  F: { noun: "fold", gerund: "folding", verb: "fold" },
+  B33: { noun: "small bet", gerund: "betting small", verb: "bet small" },
+  B75: { noun: "big bet", gerund: "betting big", verb: "bet big" },
+  B125: { noun: "overbet", gerund: "overbetting", verb: "overbet" },
+  R: { noun: "raise", gerund: "raising", verb: "raise" },
+  AI: { noun: "shove", gerund: "going all-in", verb: "go all-in" },
+};
+
+function headlineFor(chosen: Words, best: Words, isBest: boolean, correct: boolean): string {
+  if (isBest) return `Nice ${chosen.noun}`;
+  if (correct) return `${cap(chosen.gerund)} works too`;
+  return `This one's ${article(best.noun)} ${best.noun}`;
+}
 
 /* ------------------------------------------------------------------ */
 /* Preflop                                                              */
@@ -44,7 +84,7 @@ interface PreCtx {
   spot: PreflopSpot;
   hand: string;
   seat: string;
-  vName: string;
+  v: string;
   behind: number;
   ip: boolean;
   openPct: number;
@@ -52,7 +92,7 @@ interface PreCtx {
   req: number;
   eq: number | null;
   realized: number | null;
-  label: (a: PfAction) => string;
+  words: (a: PfAction) => Words;
   freq: (a: PfAction) => number;
 }
 
@@ -61,11 +101,12 @@ function preCtx(spot: PreflopSpot): PreCtx {
   const f = features(spot.hand);
   const ip = heroIsIP(spot);
   const eq = spot.villainRange && spot.kind !== "rfi" ? equityVsRange(spot.cards, [], combosFromWeights(spot.villainRange), 2000, mulberry32(11)).equity : null;
+  const label = (a: PfAction) => (spot.options.find((o) => o.key === a)?.label ?? a).toLowerCase();
   return {
     spot,
     hand: spot.hand,
     seat: posLabel(spot.hero, spot.table),
-    vName: spot.villain ? posLabel(spot.villain, spot.table) : spot.limpers.length ? "the limpers" : "",
+    v: spot.villain ? posLabel(spot.villain, spot.table) : "the limpers",
     behind: order.length - order.indexOf(spot.hero) - 1,
     ip,
     openPct: Math.round(actionPercents(spot.chart).raise),
@@ -73,7 +114,7 @@ function preCtx(spot: PreflopSpot): PreCtx {
     req: spot.toCallBB > 0 ? spot.toCallBB / (spot.potBB + spot.toCallBB) : 0,
     eq,
     realized: eq !== null ? eq * realization(f, ip) : null,
-    label: (a) => spot.options.find((o) => o.key === a)?.label ?? spot.chart.labels[a] ?? a,
+    words: (a) => PRE_WORDS[label(a)] ?? { noun: label(a), gerund: label(a), verb: label(a) },
     freq: (a) => spot.chart.freqs[spot.hand][a] ?? 0,
   };
 }
@@ -81,114 +122,106 @@ function preCtx(spot: PreflopSpot): PreCtx {
 function preWhy(c: PreCtx, a: PfAction): string {
   const { spot, hand } = c;
   const f = features(hand);
-  const verb = c.label(a).toLowerCase();
-  const reason = preReason(spot, a, f);
-  switch (reason) {
+  const w = c.words(a);
+  const have = c.realized ?? c.eq;
+  switch (preReason(spot, a, f)) {
     case "value":
-      return `${hand} is ahead of the hands that continue — ${verb} for value.`;
+      return `${hand} is ahead of most hands that keep playing, so ${w.verb} and get paid.`;
     case "merge":
-      return `${hand} beats most of ${c.vName}'s range — ${verb} for value.`;
+      return `${hand} beats most of ${c.v}'s range, so ${w.verb} for value.`;
     case "steal":
-      return spot.hero === "SB" ? "Only the big blind is left — a raise wins the pot often." : `Only ${c.behind} players are left — a raise wins the blinds often.`;
+      return spot.hero === "SB" ? "Only the big blind is left, so a raise takes the pot a lot of the time." : `Only ${c.behind} players are left behind you, so a raise picks up the blinds a lot of the time.`;
     case "playability":
-      return `${hand} is ${f.pair ? "a pair" : f.suited ? (f.gap <= 1 ? "suited and connected" : "suited") : "connected"} — it plays well after the flop.`;
+      return `${hand} is ${f.pair ? "a pair" : f.suited ? (f.gap <= 1 ? "suited and connected" : "suited") : "connected"}, so it plays well after the flop.`;
     case "initiative":
-      return `${hand} is inside the ${c.seat} opening range (the top ${c.openPct}%) — open it.`;
+      return `${hand} is in the top ${c.openPct}% of hands that ${c.seat} opens, so raise it.`;
     case "blockers":
-      return `Your ${f.ace ? "ace" : RANK_NAMES[f.hi].toLowerCase()} blocks their best hands, so this ${verb} gets extra folds.`;
+      return `Your ${f.ace ? "ace" : RANK_NAMES[f.hi].toLowerCase()} makes their best hands less likely, so this ${w.noun} gets more folds.`;
     case "fold-equity":
-      return `${cap(c.vName)} folds often enough that a ${verb} profits right away.`;
-    case "price": {
-      const have = c.realized ?? c.eq;
-      return have !== null && have >= c.req ? `You need ${pct(c.req)} equity and have about ${pct(have)} — a good price to call.` : "You're getting a good enough price, and it wins big when it hits.";
-    }
+      return `${cap(c.v)} folds often enough that this ${w.noun} wins money right away.`;
+    case "price":
+      return have !== null && have >= c.req ? `You need ${pct(c.req)} and you have about ${pct(have)}, so the price is right.` : "The price is good enough, and this hand wins big when it hits.";
     case "set-mine":
-      return "Small pairs want a cheap flop: you hit a set 1 in 8.5 times and win big.";
+      return "Small pairs want a cheap flop. You hit a set about 1 in 8 times and can win a big pot.";
     case "position":
-      return `You'll act last after the flop — calling keeps ${c.vName}'s weaker hands in.`;
+      return `You'll act last after the flop, and calling keeps ${c.v}'s weaker hands in.`;
     case "implied":
-      return `It's cheap, and ${hand} can win a big pot when it hits.`;
+      return `It's cheap to see a flop, and ${hand} can win a big pot when it hits.`;
     case "dominated":
-      return `${hand} is often dominated — better ${RANK_NAMES[f.hi].toLowerCase()}s have you outkicked.`;
+      if (f.hi < 8) return `${hand} is too weak to play here. It makes small pairs and weak draws that lose big pots.`;
+      return `${hand} gets dominated a lot here. Better ${plural(RANK_NAMES[f.hi].toLowerCase())} have you outkicked.`;
     case "too-weak":
-      if (spot.kind === "rfi") return `${c.seat} opens only the top ${c.openPct}% of hands — ${hand} isn't one of them.`;
-      if (spot.kind === "vs4bet") return `A 4-bet range is mostly KK+ and AK — ${hand} is crushed.`;
-      if (spot.kind === "vs3bet") return `${cap(c.vName)}'s 3-bet range is strong — ${hand} can't continue profitably.`;
-      return `${hand} isn't strong enough against ${c.vName}'s ${c.villainPct}% range.`;
+      if (spot.kind === "rfi") return `${c.seat} only opens the top ${c.openPct}% of hands, and ${hand} isn't one of them.`;
+      if (spot.kind === "vs4bet") return `A 4-bet is almost always KK+ or AK, and ${hand} is crushed.`;
+      if (spot.kind === "vs3bet") return `${cap(c.v)}'s 3-bet range is strong, and ${hand} can't keep up.`;
+      return `${hand} isn't strong enough against the ${c.villainPct}% of hands ${c.v} opens.`;
     case "oop":
-      return `You'd play out of position every street — ${hand} can't handle that.`;
+      return `You'd be out of position the whole hand, and ${hand} can't handle that.`;
     case "multiway":
-      return "With limpers in, offsuit hands make second-best pairs — let it go.";
+      return "With limpers in, offsuit hands make a lot of second-best pairs. Let it go.";
     default:
-      return `${hand} plays best as a ${verb} here.`;
+      return `${hand} plays best as ${article(w.noun)} ${w.noun} here.`;
   }
 }
 
 function preWhyNot(c: PreCtx, a: PfAction, best: PfAction): string {
   const { spot, hand } = c;
   const f = features(hand);
-  const bestLabel = c.label(best).toLowerCase();
+  const b = c.words(best);
+  const have = c.realized ?? c.eq;
   if (a === "fold") {
-    if (best === "call") {
-      const have = c.realized ?? c.eq;
-      return have !== null && have >= c.req ? `Too good to fold — you need ${pct(c.req)} and have about ${pct(have)}.` : "Too good to fold — it wins enough when it hits to justify the call.";
-    }
+    if (best === "call") return have !== null && have >= c.req ? `Too good to fold. You need ${pct(c.req)} and you have about ${pct(have)}.` : "Too good to fold. It wins enough when it hits to pay for the call.";
     const plays = 1 - c.freq("fold");
-    return plays >= 0.95 ? `Too strong to fold — ${hand} is always a ${bestLabel} here.` : `Too strong to fold — the baseline plays ${hand} ${pct(plays)} of the time.`;
+    return plays >= 0.95 ? `Too strong to fold. You always ${b.verb} with ${hand} here.` : `Too strong to fold. You play ${hand} ${pct(plays)} of the time here.`;
   }
   if (a === "call") {
-    if (spot.kind === "rfi") return "Limping gives up fold equity and invites a raise behind you.";
+    if (spot.kind === "rfi") return "Limping gives up your chance to win the pot right away, and someone behind can raise.";
     if (best === "fold") {
-      if (c.realized !== null && c.realized < c.req) return `Even at this price it doesn't pay: about ${pct(c.realized)} usable equity vs ${pct(c.req)} needed.`;
-      return `${hand} loses money calling here — it's dominated too often${c.ip ? "" : " out of position"}.`;
+      if (c.realized !== null && c.realized < c.req) return `Even at this price it doesn't pay. You'd have about ${pct(c.realized)} to work with and you need ${pct(c.req)}.`;
+      return `${hand} loses money ${c.words(a).gerund} here. It's dominated too often${c.ip ? "" : ", and you're out of position"}.`;
     }
-    if (spot.kind === "vsLimp") return spot.hero === "SB" ? "Completing wastes a strong hand — raise instead." : "Over-limping wastes a strong hand — raise to isolate.";
-    if (spot.hero === "SB" && spot.kind === "vsOpen") return "Calling in the small blind invites a squeeze and plays out of position.";
-    if (f.category === "premium" || f.category === "strong") return "Calling keeps the pot small with a hand that wants it big.";
-    return `This hand plays poorly as a call — ${bestLabel} or fold.`;
+    if (spot.kind === "vsLimp") return spot.hero === "SB" ? "Completing wastes a strong hand. Raise instead." : "Limping behind wastes a strong hand. Raise and play the limper heads-up.";
+    if (spot.hero === "SB" && spot.kind === "vsOpen") return "Calling from the small blind invites a squeeze, and you're out of position.";
+    if (f.category === "premium" || f.category === "strong") return "Calling keeps the pot small with a hand that wants a big one.";
+    return `This hand doesn't play well as a call. ${cap(b.verb)} or fold.`;
   }
   if (a === "raise" || a === "allin") {
-    if (best === "fold") return spot.kind === "rfi" ? `Opening ${hand} here gets called or 3-bet by better hands too often.` : "A raise gets called or re-raised by better hands too often.";
+    if (best === "fold") return spot.kind === "rfi" ? `Opening ${hand} here runs into better hands too often.` : "Raising here gets called or re-raised by better hands too often.";
     if (best === "check") return `Raising ${hand} builds a pot you're not strong enough to play.`;
     if (best === "call") {
-      if (spot.kind === "vsLimp") return "This hand wants a cheap multiway flop, not a bloated pot.";
-      if (f.smallPair || f.suitedConnector) return `${hand} plays best as a call — a re-raise turns it into a bluff against a strong range.`;
-      if (spot.hero === "BB") return `A 3-bet bloats the pot out of position — ${hand} plays better as a call.`;
+      if (spot.kind === "vs4bet") return "Going all-in folds out their bluffs and only gets called by better hands.";
+      if (spot.kind === "vsLimp") return "This hand wants a cheap flop with lots of players, not a big pot.";
+      if (f.smallPair || f.suitedConnector) return `${hand} plays best as a call. Raising turns it into a bluff against a strong range.`;
+      if (spot.hero === "BB") return `3-betting builds a big pot out of position. ${hand} does better as a call.`;
       return "Raising folds out the worse hands you want to keep in.";
     }
-    return `A ${c.label(best).toLowerCase()} is the better way to play ${hand} here.`;
+    return `${cap(b.gerund)} is the better way to play ${hand} here.`;
   }
-  if (a === "check") return "Checking misses value — limpers call raises with worse hands.";
-  return `${cap(bestLabel)} is better here.`;
+  if (a === "check") return "Checking misses value. Limpers will call a raise with worse hands.";
+  return `${cap(b.gerund)} is better here.`;
 }
 
 export function preflopCoach(spot: PreflopSpot, chosen: PfAction, grade: Grade, best: PfAction, exploit: ExploitVerdict, arch: Archetype): Coach {
   const c = preCtx(spot);
   const correct = GRADES[grade].correct;
+  const cw = c.words(chosen);
+  const bw = c.words(best);
   const lines: CoachLine[] = [];
-  let headline: string;
   if (chosen === best) {
-    headline = `${c.label(best)} is right`;
-    lines.push({ tone: "good", label: `Why ${c.label(best).toLowerCase()}`, text: preWhy(c, best) });
+    lines.push({ tone: "good", label: "Why it works", text: preWhy(c, best) });
   } else if (correct) {
-    headline = `${c.label(chosen)} works`;
-    lines.push({
-      tone: "good",
-      label: "Why it's close",
-      text: `The baseline mixes ${c.label(best).toLowerCase()} ${pct(c.freq(best))} and ${c.label(chosen).toLowerCase()} ${pct(c.freq(chosen))}. ${preWhy(c, best)}`,
-    });
+    lines.push({ tone: "good", label: "Why it's close", text: `${spot.hand} is right on the edge here, so you ${bw.verb} ${pct(c.freq(best))} of the time and ${cw.verb} ${pct(c.freq(chosen))}. Both are fine.` });
   } else {
-    headline = `${c.label(best)} was better`;
-    lines.push({ tone: "bad", label: `Why not ${c.label(chosen).toLowerCase()}`, text: preWhyNot(c, chosen, best) });
-    lines.push({ tone: "good", label: `Why ${c.label(best).toLowerCase()}`, text: preWhy(c, best) });
+    lines.push({ tone: "bad", label: `The problem with ${cw.gerund}`, text: preWhyNot(c, chosen, best) });
+    lines.push({ tone: "good", label: `Why ${bw.gerund} is better`, text: preWhy(c, best) });
   }
   const shown = new Set([chosen, best]);
   const others = spot.options
     .filter((o) => !shown.has(o.key))
     .map((o) => {
       const f = c.freq(o.key);
-      const text = f >= 0.25 ? `It's also fine — the baseline does it ${pct(f)} of the time. ${preWhy(c, o.key)}` : preWhyNot(c, o.key, best);
-      return { key: o.key, label: `Why not ${o.label.toLowerCase()}?`, text };
+      const text = f >= 0.25 ? `That's fine too. It's the play ${pct(f)} of the time here. ${preWhy(c, o.key)}` : preWhyNot(c, o.key, best);
+      return { key: o.key, label: `What about ${c.words(o.key).gerund}?`, text };
     });
 
   const continues = best !== "fold" && best !== "check";
@@ -197,23 +230,23 @@ export function preflopCoach(spot: PreflopSpot, chosen: PfAction, grade: Grade, 
     const meterSaysCall = c.realized >= c.req;
     if (meterSaysCall === continues) visual = { kind: "price", need: c.req, have: c.realized };
   }
-  const exploitText = exploit.changed ? `Vs ${arch.name}: ${c.label(exploit.best).toLowerCase()}. ${exploit.note}` : undefined;
-  return { correct, headline, lines, others, visual, exploit: exploitText };
+  const exploitText = exploit.changed ? `Against ${arch.who}, ${c.words(exploit.best).gerund} is better. ${exploit.note}` : undefined;
+  return { correct, headline: headlineFor(cw, bw, chosen === best, correct), lines, others, visual, exploit: exploitText };
 }
 
 export function preflopHint(spot: PreflopSpot): string {
   const c = preCtx(spot);
   switch (spot.kind) {
     case "rfi":
-      return `${c.seat} opens about ${c.openPct}% of hands. ${c.behind} ${c.behind === 1 ? "player is" : "players are"} left to act.`;
+      return `${c.seat} opens about ${c.openPct}% of hands, and ${c.behind} ${c.behind === 1 ? "player is" : "players are"} still to act.`;
     case "vsOpen":
-      return `${cap(c.vName)} opens about ${c.villainPct}% of hands. Calling needs ${pct(c.req)} equity.`;
+      return `${cap(c.v)} opens about ${c.villainPct}% of hands. You need ${pct(c.req)} equity to call.`;
     case "vs3bet":
-      return `${cap(c.vName)}'s 3-bet range is about ${c.villainPct}% of hands. You'll be ${c.ip ? "in" : "out of"} position.`;
+      return `${cap(c.v)} 3-bets about ${c.villainPct}% of hands, and you'll be ${c.ip ? "in" : "out of"} position.`;
     case "vs4bet":
-      return `4-bet ranges are narrow and strong — about ${c.villainPct}% of hands.`;
+      return `4-bets are narrow and strong, only about ${c.villainPct}% of hands.`;
     default:
-      return "Limpers usually hold weak hands. Raise strong hands to play them heads-up.";
+      return "Limpers usually have weak hands. Raise your strong ones and play them heads-up.";
   }
 }
 
@@ -226,9 +259,9 @@ export function preflopContext(spot: PreflopSpot, amount: (bb: number) => string
     case "vsOpen":
       return `${v} raises to ${amount(top)}`;
     case "vs3bet":
-      return `${v} 3-bets to ${amount(top)}`;
+      return `${v} 3-bets you to ${amount(top)}`;
     case "vs4bet":
-      return `${v} 4-bets to ${amount(top)}`;
+      return `${v} 4-bets you to ${amount(top)}`;
     default:
       return spot.limpers.length === 1 ? "One player limps" : `${spot.limpers.length} players limp`;
   }
@@ -246,39 +279,39 @@ function postWhy(a: Analysis, x: PostAction): string {
   const eq = a.eqHero;
   const req = a.reqEq ?? 0;
   if (x === "X" && !a.facing && (a.family === "CALLER_LEAD" || a.family === "RIVER_LEAD") && a.bucket !== "air")
-    return "You called preflop, so check to the raiser — they'll bet most of their range for you.";
+    return "You called preflop, so check to the raiser. They'll bet most of their range for you.";
   switch (postReason(a, x)) {
     case "value":
-      if (a.facing) return "Raise to build the pot while they still have a hand.";
-      return a.eqVsCalls !== null ? `You beat ${pct(a.eqVsCalls)} of the hands that call — bet for value.` : "You're ahead of most hands that continue — bet for value.";
+      if (a.facing) return "Raise and build the pot while they still have a hand.";
+      return a.eqVsCalls !== null ? `You beat ${pct(a.eqVsCalls)} of the hands that call, so bet and get paid.` : "You're ahead of most hands that keep playing, so bet and get paid.";
     case "thin-value":
-      return "Worse hands still call — a small value bet earns more than checking.";
+      return "Worse hands will still call, so a small value bet earns more than checking.";
     case "protection":
-      return "Bet to charge draws and overcards instead of giving free cards.";
+      return "Bet now so draws and overcards have to pay to see another card.";
     case "range-bet":
-      return "This board favors your range — a small bet works with almost everything.";
+      return "This board is great for your range. A small bet works with almost everything.";
     case "semi-bluff":
-      return `${a.info.draws.outs} outs plus fold equity — betting wins now or later.`;
+      return `You have ${a.info.draws.outs} outs and they might fold. Betting wins now or later.`;
     case "bluff":
-      return "No showdown value, but they fold often enough to a bet.";
+      return "You won't win at showdown, but they fold often enough to a bet.";
     case "blockers":
-      return "No showdown value, and your cards block their calls — a good bluff.";
+      return "You won't win at showdown, and your cards block the hands they'd call with. Good spot to bluff.";
     case "induce":
-      return "You're way ahead — checking lets them bluff or catch up.";
+      return "You're way ahead. Checking lets them bluff or catch up a little.";
     case "pot-control":
-      return a.bucket === "strong" ? "Strong but vulnerable — checking controls the pot and keeps their weaker hands in." : "Medium strength — checking keeps the pot small and gets to showdown.";
+      return a.bucket === "strong" ? "Strong, but easy to outdraw. Checking keeps the pot small and their weaker hands in." : "It's a medium hand. Checking keeps the pot small and gets you to showdown.";
     case "showdown":
-      return "It can win at showdown — don't turn it into a bluff.";
+      return "It can win at showdown, so don't turn it into a bluff.";
     case "give-up":
-      if (a.bucket === "drawWeak") return `A weak draw (${a.info.draws.labels[0] ?? "a few outs"}) — take the free card instead of bluffing.`;
-      if (a.bucket === "drawStrong") return "Take the free card — your draw doesn't need to bet here.";
-      return a.street === "river" ? "No pair and they won't fold enough — checking loses the least." : "No pair and no real draw — checking loses the least.";
+      if (a.bucket === "drawWeak") return `It's only a small draw${a.info.draws.labels[0] ? ` (${a.info.draws.labels[0]})` : ""}. Take the free card instead of bluffing.`;
+      if (a.bucket === "drawStrong") return "Take the free card. Your draw doesn't need to bet here.";
+      return a.street === "river" ? "No pair, and they won't fold enough. Checking loses the least." : "No pair and no real draw. Checking loses the least.";
     case "pot-odds":
-      return x === "C" ? `You need ${pct(req)} and have ${pct(eq)} — the price is right.` : `You need ${pct(req)} but have only ${pct(eq)} — let it go.`;
+      return x === "C" ? `You need ${pct(req)} and you have ${pct(eq)}, so the price is right.` : `You need ${pct(req)} but only have ${pct(eq)}. Let it go.`;
     case "bluff-catch":
-      return "You beat their bluffs, and they bluff often enough here to call.";
+      return "You beat their bluffs, and they bluff often enough here to make calling worth it.";
     default:
-      return `${ACTION_NAMES[x]} is the strongest play here.`;
+      return `${cap(POST_WORDS[x].gerund)} is the strongest play here.`;
   }
 }
 
@@ -286,70 +319,62 @@ function postWhyNot(a: Analysis, x: PostAction, best: PostAction): string {
   const b = a.bucket;
   const eq = a.eqHero;
   const req = a.reqEq ?? 0;
-  if (x === "X") {
-    if (VALUE.includes(b)) return "Checking gives free cards and misses value.";
-    return "Checking gives up a pot they'd often fold.";
-  }
+  if (x === "X") return VALUE.includes(b) ? "Checking gives them a free card and misses value." : "Checking gives up a pot they'd fold a lot of the time.";
   if (BETS.includes(x) && best === "X") {
+    if (a.family === "CALLER_LEAD" || a.family === "RIVER_LEAD") return "Betting into the preflop raiser is rarely right. Check and let them bet.";
     if (b === "nutted") return "Betting can scare off the hands you want to trap.";
-    if (b === "strong") return "Checking keeps your range protected and the pot under control here.";
+    if (b === "strong") return "Checking keeps the pot manageable and keeps your checks strong.";
     if (b === "medium" || b === "weak") return x === "B33" ? "A bet folds out worse hands and gets called by better ones." : "A big bet only gets called by better hands.";
-    return "They won't fold often enough — this bluff loses money.";
+    return "They won't fold often enough, so this bluff loses money.";
   }
   if (BETS.includes(x) && BETS.includes(best)) {
-    return (SIZE[x] ?? 0) > (SIZE[best] ?? 0) ? "A smaller bet gets called by more worse hands." : "A bigger bet builds the pot and charges draws more.";
+    return (SIZE[x] ?? 0) > (SIZE[best] ?? 0) ? "A smaller bet gets called by more worse hands." : "A bigger bet builds the pot and makes draws pay more.";
   }
-  if (x === "F") {
-    if (best === "C") return `You have ${pct(eq)} and need ${pct(req)} — folding is too tight.`;
-    return "You're too strong to fold — raise for value.";
-  }
+  if (x === "F") return best === "C" ? `You have ${pct(eq)} and need ${pct(req)}. Folding is too tight.` : "You're too strong to fold. Raise for value.";
   if (x === "C") {
-    if (best === "F") return `You need ${pct(req)} but have only ${pct(eq)}.`;
-    return b === "drawStrong" ? "Raising adds fold equity to a big draw." : "Raising builds the pot while you're ahead.";
+    if (best === "F") return `You need ${pct(req)} but only have ${pct(eq)}.`;
+    return b === "drawStrong" ? "Raising puts pressure on them, and you still have your draw if they call." : "Raising builds the pot while you're ahead.";
   }
   if (x === "R" || x === "AI") {
-    if (best === "C") return b === "medium" ? "Raising a medium hand only gets called by better." : "Raising folds out the bluffs you beat.";
-    if (best === "F") return "You'd put more money in with the worst hand.";
+    if (best === "C") return b === "medium" ? "Raising a medium hand only gets called by better ones." : "Raising folds out the bluffs you beat.";
+    if (best === "F") return "You'd be putting more money in with the worst hand.";
   }
-  return `${ACTION_NAMES[best]} is better here.`;
+  return `${cap(POST_WORDS[best].gerund)} is better here.`;
 }
 
 export function postflopCoach(a: Analysis, chosen: PostAction, grade: Grade, arch: Archetype): Coach {
   const best = a.gtoBest;
   const correct = GRADES[grade].correct;
-  const name = (x: PostAction) => ACTION_NAMES[x];
+  const cw = POST_WORDS[chosen];
+  const bw = POST_WORDS[best];
   const lines: CoachLine[] = [];
-  let headline: string;
   if (chosen === best) {
-    headline = `${name(best)} is right`;
-    lines.push({ tone: "good", label: `Why ${name(best).toLowerCase()}`, text: postWhy(a, best) });
+    lines.push({ tone: "good", label: "Why it works", text: postWhy(a, best) });
   } else if (correct) {
-    headline = `${name(chosen)} works`;
-    lines.push({
-      tone: "good",
-      label: "Why it's close",
-      text: `The baseline mixes ${name(best).toLowerCase()} ${pct(a.gto[best] ?? 0)} and ${name(chosen).toLowerCase()} ${pct(a.gto[chosen] ?? 0)}. ${postWhy(a, best)}`,
-    });
+    lines.push({ tone: "good", label: "Why it's close", text: `This spot is a mix. With hands like this you ${bw.verb} ${pct(a.gto[best] ?? 0)} of the time and ${cw.verb} ${pct(a.gto[chosen] ?? 0)}. Both are fine.` });
   } else {
-    headline = `${name(best)} was better`;
-    lines.push({ tone: "bad", label: `Why not ${name(chosen).toLowerCase()}`, text: postWhyNot(a, chosen, best) });
-    lines.push({ tone: "good", label: `Why ${name(best).toLowerCase()}`, text: postWhy(a, best) });
+    lines.push({ tone: "bad", label: `The problem with ${cw.gerund}`, text: postWhyNot(a, chosen, best) });
+    lines.push({ tone: "good", label: `Why ${bw.gerund} is better`, text: postWhy(a, best) });
   }
   const shown = new Set([chosen, best]);
   const others = a.legal
     .filter((l) => !shown.has(l.action))
     .map((l) => {
       const f = a.gto[l.action] ?? 0;
-      const text = f >= 0.25 ? `It's also fine — the baseline does it ${pct(f)} of the time. ${postWhy(a, l.action)}` : postWhyNot(a, l.action, best);
-      return { key: l.action, label: `Why not ${name(l.action).toLowerCase()}?`, text };
+      const text = f >= 0.25 ? `That's fine too. It's the play ${pct(f)} of the time here. ${postWhy(a, l.action)}` : postWhyNot(a, l.action, best);
+      return { key: l.action, label: `What about ${POST_WORDS[l.action].gerund}?`, text };
     });
   const visual: CoachVisual = a.facing ? { kind: "price", need: a.reqEq ?? 0, have: a.eqHero } : { kind: "strength", eq: a.eqVsCalls ?? a.eqHero, bucket: a.bucket };
-  const exploit = a.exploitBest !== best ? `Vs ${arch.name}: ${name(a.exploitBest).toLowerCase()}. ${a.facing ? arch.counter.facingBet : VALUE.includes(a.bucket) || a.bucket === "medium" ? arch.counter.valueBet : arch.counter.bluff}` : undefined;
-  return { correct, headline, lines, others, visual, exploit };
+  const note = a.facing ? arch.counter.facingBet : VALUE.includes(a.bucket) || a.bucket === "medium" ? arch.counter.valueBet : arch.counter.bluff;
+  const exploit = a.exploitBest !== best ? `Against ${arch.who}, ${POST_WORDS[a.exploitBest].gerund} is better. ${note}` : undefined;
+  return { correct, headline: headlineFor(cw, bw, chosen === best, correct), lines, others, visual, exploit };
 }
 
 export function postflopHint(a: Analysis): string {
-  const hand = `${a.info.made}${a.info.draws.labels.length ? ` + ${a.info.draws.labels[0]}` : ""}`;
-  if (a.facing) return `You have ${hand.toLowerCase()}. Calling needs ${pct(a.reqEq ?? 0)} equity.`;
-  return `${a.tex.label}. You have ${hand.toLowerCase()} (${BUCKET_LABEL[a.bucket].toLowerCase()}).`;
+  const made = a.info.made.toLowerCase();
+  const draw = a.info.draws.labels[0];
+  const hand = `${/^(overpair|underpair|set|straight|flush|nut |second-nut|low flush|full house)/.test(made) ? `${article(made)} ` : ""}${made}${draw ? ` plus ${article(draw)} ${draw}` : ""}`;
+  if (a.facing) return `You have ${hand}. You need ${pct(a.reqEq ?? 0)} equity to call.`;
+  const b = BUCKET_LABEL[a.bucket].toLowerCase();
+  return `${a.tex.label}. You have ${hand}, ${a.bucket === "air" ? "with no pair and no real draw" : `which is ${article(b)} ${b}`}.`;
 }

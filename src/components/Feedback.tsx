@@ -2,6 +2,8 @@ import { useState, type ReactNode } from "react";
 import { Check, ChevronDown, X } from "lucide-react";
 import type { Coach } from "../lib/coachText";
 import { GRADES, type Grade } from "../lib/grading";
+import { useStore } from "../store/store";
+import { announce } from "../store/ui";
 
 const TONE = {
   good: { bg: "rgba(34,197,94,0.08)", fg: "#4ade80" },
@@ -47,8 +49,22 @@ export function Feedback({
   children?: ReactNode;
 }) {
   const [open, setOpen] = useState<string | null>(null);
+  const [seen, setSeen] = useState<Set<string>>(() => new Set());
+  const toggle = (id: string) => {
+    setOpen(open === id ? null : id);
+    if (seen.has(id)) return;
+    setSeen(new Set(seen).add(id));
+    announce(useStore.getState().bump("ladderOpens"));
+  };
+  const learnMore = () => {
+    if (!seen.has("learn-more")) {
+      setSeen(new Set(seen).add("learn-more"));
+      announce(useStore.getState().bump("fullLadders"));
+    }
+    onLearnMore();
+  };
   const questions = [...coach.others.map((o) => ({ id: o.key, q: o.label, a: o.text }))];
-  if (coach.exploit) questions.push({ id: "exploit", q: "How would I exploit this opponent?", a: coach.exploit });
+  if (coach.exploit) questions.push({ id: "exploit", q: "How do I beat this player?", a: coach.exploit });
   const ok = GRADES[grade].correct;
   return (
     <div className="space-y-4">
@@ -83,13 +99,13 @@ export function Feedback({
       {questions.length > 0 && (
         <div className="px-1">
           {questions.map((q) => (
-            <Question key={q.id} q={q.q} a={q.a} open={open === q.id} onToggle={() => setOpen(open === q.id ? null : q.id)} />
+            <Question key={q.id} q={q.q} a={q.a} open={open === q.id} onToggle={() => toggle(q.id)} />
           ))}
         </div>
       )}
 
       <div className="flex items-center gap-2 pt-2">
-        <button type="button" className="btn-text" onClick={onLearnMore}>
+        <button type="button" className="btn-text" onClick={learnMore}>
           Learn more
         </button>
         <button type="button" className="btn-filled btn-lg flex-1" onClick={onNext}>

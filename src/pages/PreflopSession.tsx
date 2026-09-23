@@ -173,7 +173,7 @@ export function PreflopSession({ mode }: { mode: PreflopMode }) {
       setAnswer({ action: a, res, exploit: ex, coach, xp: reward.xp });
       setXpSum((x) => x + reward.xp);
       setDone((d) => d + 1);
-      setResults((r) => [...r, { ok: reward.correct, title: `${spot.hand} · ${posLabel(spot.hero, spot.table)} · ${context}`, detail: `${coach.headline} — ${coach.lines[coach.lines.length - 1].text}` }]);
+      setResults((r) => [...r, { ok: reward.correct, title: `${spot.hand} · ${posLabel(spot.hero, spot.table)} · ${context}`, detail: `${coach.headline}. ${coach.lines[coach.lines.length - 1].text}` }]);
     },
     [amount, answer, arch, context, finished, mission, spot],
   );
@@ -249,7 +249,7 @@ export function PreflopSession({ mode }: { mode: PreflopMode }) {
     return (
       <div>
         <SessionBar done={0} total={1} onClose={() => navigate("/")} label="Fix your mistakes" />
-        <EmptyState icon={CircleCheck} title="Nothing to fix right now" body="Mistakes you make come back here at growing intervals until you get them right." action={<button className="btn-filled" onClick={() => navigate("/preflop?mode=today")}>Start today's session</button>} />
+        <EmptyState icon={CircleCheck} title="Nothing to fix right now" body="When you miss a hand, it comes back here later so you can get it right." action={<button className="btn-filled" onClick={() => navigate("/preflop?mode=today")}>Start today's session</button>} />
       </div>
     );
   }
@@ -270,7 +270,7 @@ export function PreflopSession({ mode }: { mode: PreflopMode }) {
       >
         {mission && (
           <p className={`t-body mt-4 font-semibold ${passed ? "text-emerald-300" : "text-rose-300"}`}>
-            {passed ? `Practice passed — ${Math.round(mission.acc * 100)}% needed.` : `Need ${Math.round(mission.acc * 100)}% to pass. Try again.`}
+            {passed ? `Passed. You needed ${Math.round(mission.acc * 100)}%.` : `You need ${Math.round(mission.acc * 100)}% to pass. Give it another try.`}
           </p>
         )}
       </SessionSummary>
@@ -361,8 +361,8 @@ export function PreflopSession({ mode }: { mode: PreflopMode }) {
           ) : (
             <div className="card-flat text-center">
               <div className="t-title">Your move</div>
-              <p className="t-body mt-1 text-ink-300">Pick an action. You'll see right away why it works — or why it doesn't.</p>
-              <p className="t-label mt-4">Keys: F fold · C call · R raise · H hint</p>
+              <p className="t-body mt-1 text-ink-300">Pick an action. You'll see right away why it works, or why it doesn't.</p>
+              <p className="t-label mt-4">Shortcuts: F fold, C call, R raise, H hint</p>
             </div>
           )}
         </div>
@@ -388,7 +388,7 @@ export function PreflopSession({ mode }: { mode: PreflopMode }) {
             </div>
           </div>
           <div>
-            <div className="t-label mb-2">Your seat (none = all)</div>
+            <div className="t-label mb-2">Your seat (leave empty for all)</div>
             <div className="flex flex-wrap gap-2">
               {positionsFor(settings.table).map((p) => {
                 const on = positions.includes(p);

@@ -5,15 +5,14 @@ export interface GradeMeta {
   color: string;
   xp: number;
   correct: boolean;
-  line: string;
 }
 
 export const GRADES: Record<Grade, GradeMeta> = {
-  perfect: { label: "Perfect", color: "#22c55e", xp: 10, correct: true, line: "That's the baseline play." },
-  good: { label: "Good — mixed spot", color: "#84cc16", xp: 7, correct: true, line: "Baseline mixes this action in. Fine choice." },
-  inaccuracy: { label: "Inaccuracy", color: "#eab308", xp: 3, correct: false, line: "A rare choice here. Small leak." },
-  mistake: { label: "Mistake", color: "#f97316", xp: 1, correct: false, line: "Baseline almost never does this." },
-  blunder: { label: "Blunder", color: "#ef4444", xp: 0, correct: false, line: "A costly error in a clear spot." },
+  perfect: { label: "Perfect", color: "#22c55e", xp: 10, correct: true },
+  good: { label: "Good", color: "#84cc16", xp: 7, correct: true },
+  inaccuracy: { label: "Slightly off", color: "#eab308", xp: 3, correct: false },
+  mistake: { label: "Mistake", color: "#f97316", xp: 1, correct: false },
+  blunder: { label: "Big mistake", color: "#ef4444", xp: 0, correct: false },
 };
 
 export const GRADE_ORDER: Grade[] = ["perfect", "good", "inaccuracy", "mistake", "blunder"];

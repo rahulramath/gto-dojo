@@ -15,10 +15,10 @@ const PRE_VERB: Record<string, Record<string, string>> = {
   rfi: { raise: "open", call: "limp", fold: "fold" },
   vsOpen: { raise: "3-bet", call: "call", fold: "fold" },
   vs3bet: { raise: "4-bet", call: "call", fold: "fold" },
-  vs4bet: { allin: "jam", call: "call", fold: "fold" },
-  vsLimp: { raise: "iso-raise", call: "limp", fold: "fold", check: "check" },
+  vs4bet: { allin: "go all-in", call: "call", fold: "fold" },
+  vsLimp: { raise: "raise", call: "limp behind", fold: "fold", check: "check" },
 };
-const KIND_NAME: Record<string, string> = { rfi: "opening", vsOpen: "facing opens", vs3bet: "facing 3-bets", vs4bet: "facing 4-bets", vsLimp: "vs limpers" };
+const KIND_NAME: Record<string, string> = { rfi: "opening", vsOpen: "facing a raise", vs3bet: "facing a 3-bet", vs4bet: "facing a 4-bet", vsLimp: "against limpers" };
 
 function topLeak(log: DecisionLog[]): { title: string; body: string; url: string } | null {
   const groups = new Map<string, DecisionLog[]>();
@@ -43,8 +43,8 @@ function topLeak(log: DecisionLog[]): { title: string; body: string; url: string
         const verb = PRE_VERB[kind]?.[a] ?? a;
         best = {
           sev: Math.abs(diff),
-          title: `You ${diff > 0 ? "over" : "under"}-${verb === "fold" ? "fold" : verb === "call" ? "call" : `use ${verb}`} ${posLabel(pos as PosId)} ${KIND_NAME[kind] ?? ""}`,
-          body: `You ${verb} ${pct(user[a] ?? 0)} of the time. The baseline does ${pct(base[a] ?? 0)}.`,
+          title: `${posLabel(pos as PosId)} ${KIND_NAME[kind] ?? ""}: you ${verb} too ${diff > 0 ? "often" : "rarely"}`,
+          body: `You ${verb} ${pct(user[a] ?? 0)} of the time here. The chart says ${pct(base[a] ?? 0)}.`,
           url: `/preflop?kinds=${kind}&pos=${pos}`,
         };
       }
@@ -107,7 +107,7 @@ export function MePage() {
       <div className="grid grid-cols-3 gap-2">
         <StatTile icon={Flame} color="#fb923c" label={`Best ${s.streak.best}`} value={`${s.streak.current} ${s.streak.current === 1 ? "day" : "days"}`} />
         <StatTile icon={Hand} label="Decisions" value={s.counters.decisions} />
-        <StatTile icon={Percent} color="#22c55e" label="Accuracy" value={s.counters.decisions ? pct(acc) : "—"} />
+        <StatTile icon={Percent} color="#22c55e" label="Accuracy" value={s.counters.decisions ? pct(acc) : "Not yet"} />
       </div>
 
       <section>
@@ -246,7 +246,7 @@ export function MePage() {
         </div>
       </Sheet>
       <Sheet open={sheet === "reset"} onClose={() => setSheet(null)} title="Reset everything?">
-        <p className="t-body">This clears XP, belts, achievements, lessons and mistakes. Export first if you want a backup.</p>
+        <p className="t-body">This clears your XP, belts, achievements, lessons and mistakes. Export first if you want a backup.</p>
         <div className="mt-6 flex gap-2">
           <button className="btn-outline flex-1" onClick={() => setSheet(null)}>
             Cancel
@@ -303,7 +303,7 @@ export function MePage() {
           </div>
         )}
       </Sheet>
-      <p className="t-label text-center">Grades use solver-approximated 100bb baselines. Live limper charts are exploit heuristics.</p>
+      <p className="t-label text-center">Grades are based on solver-style strategies for 100 big blind stacks. The limper charts are built for loose live games.</p>
     </div>
   );
 }

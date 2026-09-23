@@ -50,12 +50,12 @@ export const useUi = create<UiState>()((set, get) => ({
 /** Surface level-ups, belts and achievements without interrupting play. */
 export function announce(r: Reward): void {
   const ui = useUi.getState();
-  r.achievements.slice(0, 2).forEach((a: Achievement) => ui.push({ icon: a.icon, title: a.name, body: `${a.desc} +${a.xp} XP`, tone: "gold" }));
+  r.achievements.slice(0, 2).forEach((a: Achievement) => ui.push({ icon: a.icon, title: `${a.name} unlocked`, body: `${a.desc} +${a.xp} XP`, tone: "gold" }));
   if (r.beltUp) {
-    ui.push({ icon: "🥋", title: `${r.beltUp.belt.name} belt · ${r.beltUp.pos}`, body: "This seat just ranked up.", tone: "gold" });
+    ui.push({ icon: "🥋", title: `${r.beltUp.belt.name} belt · ${r.beltUp.pos}`, body: "You ranked up in this seat.", tone: "gold" });
     ui.burst();
   } else if (r.levelUp) {
-    ui.push({ icon: "⭐", title: `Level ${r.levelUp}`, body: "Keep it going.", tone: "gold" });
+    ui.push({ icon: "⭐", title: `You reached level ${r.levelUp}`, body: "Nice work.", tone: "gold" });
     ui.burst();
   }
 }

@@ -140,7 +140,7 @@ export function PostflopSession() {
       const coach = postflopCoach(d, d.chosen, d.grade, arch);
       play(d.grade === "perfect" ? "perfect" : GRADES[d.grade].correct ? "good" : "bad");
       announce(reward);
-      setResults((r) => [...r, { ok: reward.correct, title: `${cardsPretty(hand.heroCards)} on ${cardsPretty(d.board)} · ${ACTION_NAMES[d.chosen]}`, detail: `${coach.headline} — ${coach.lines[coach.lines.length - 1].text}` }]);
+      setResults((r) => [...r, { ok: reward.correct, title: `${cardsPretty(hand.heroCards)} on ${cardsPretty(d.board)} · ${ACTION_NAMES[d.chosen]}`, detail: `${coach.headline}. ${coach.lines[coach.lines.length - 1].text}` }]);
       setXpSum((x) => x + reward.xp);
       setReview({ d, before: hand, coach, xp: reward.xp });
       setHand(nextHand);
@@ -247,7 +247,7 @@ export function PostflopSession() {
       >
         {mission && (
           <p className={`t-body mt-4 font-semibold ${passed ? "text-emerald-300" : "text-rose-300"}`}>
-            {passed ? `Practice passed — ${Math.round(mission.acc * 100)}% needed.` : `Need ${Math.round(mission.acc * 100)}% to pass. Try again.`}
+            {passed ? `Passed. You needed ${Math.round(mission.acc * 100)}%.` : `You need ${Math.round(mission.acc * 100)}% to pass. Give it another try.`}
           </p>
         )}
       </SessionSummary>
@@ -346,7 +346,7 @@ export function PostflopSession() {
                   {result.heroNet >= 0 ? "You won" : "You lost"} {m(Math.abs(result.heroNet))}
                 </div>
                 <div className="t-label">
-                  {handGood}/{hand.decisions.length} good decisions this hand
+                  {handGood} of {hand.decisions.length} decisions were good
                 </div>
               </div>
               <div className="card-flat flex items-center justify-around gap-4">
@@ -366,7 +366,7 @@ export function PostflopSession() {
                   <div className="t-label mt-2">{result.showdown ? result.villHand : result.foldedBy === "villain" ? "Folded" : result.villHand}</div>
                 </div>
               </div>
-              <p className="t-label">Judge the decisions, not the result — good plays lose pots sometimes.</p>
+              <p className="t-label">Good decisions still lose pots sometimes. What matters is how you played it.</p>
               <button className="btn-filled btn-lg w-full" onClick={nextHand}>
                 {handsDone + 1 >= handsTotal ? "See results" : "Next hand"}
               </button>
@@ -375,7 +375,7 @@ export function PostflopSession() {
             <div className="card-flat text-center">
               <div className="t-title">Your move</div>
               <p className="t-body mt-1 text-ink-300">{shown.line.preflop}</p>
-              <p className="t-label mt-4">Keys: X check · C call · 1 2 3 bet · F fold · H hint</p>
+              <p className="t-label mt-4">Shortcuts: X check, C call, 1 2 3 bet, F fold, H hint</p>
             </div>
           )}
         </div>
@@ -401,7 +401,7 @@ export function PostflopSession() {
             </div>
           </div>
           <div>
-            <div className="t-label mb-2">You are</div>
+            <div className="t-label mb-2">Your role</div>
             <Segmented
               value={role}
               onChange={setRole}

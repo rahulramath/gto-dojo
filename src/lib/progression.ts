@@ -9,14 +9,14 @@ export function levelInfo(xp: number): { level: number; into: number; need: numb
 }
 
 const RANKS: { min: number; title: string }[] = [
-  { min: 1, title: "Fish" },
-  { min: 3, title: "Rec Player" },
+  { min: 1, title: "Newcomer" },
+  { min: 3, title: "Rookie" },
   { min: 5, title: "Student" },
   { min: 8, title: "Grinder" },
   { min: 11, title: "Regular" },
   { min: 15, title: "Shark" },
   { min: 20, title: "Crusher" },
-  { min: 25, title: "High Roller" },
+  { min: 25, title: "High roller" },
   { min: 30, title: "Legend" },
 ];
 

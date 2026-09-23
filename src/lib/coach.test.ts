@@ -9,6 +9,7 @@ import { mulberry32 } from "./rng";
 
 const clean = (s: string) => {
   expect(s).not.toMatch(/undefined|NaN|null/);
+  expect(s, s).not.toMatch(/[—–→…;]/);
   expect(s.length).toBeLessThan(200);
 };
 

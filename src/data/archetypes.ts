@@ -27,7 +27,7 @@ export interface Counter {
   raise: BMap;
   /** Shift value bets toward bigger sizes. */
   sizeUp: boolean;
-  /** Short, practical notes for the Exploit rung. */
+  /** Short, practical notes shown in the exploit tip. */
   valueBet: string;
   bluff: string;
   facingBet: string;
@@ -48,9 +48,9 @@ export interface Archetype {
   name: string;
   emoji: string;
   color: string;
+  /** How the coach refers to this player mid-sentence, e.g. "a calling station". */
+  who: string;
   blurb: string;
-  stats: { vpip: string; pfr: string; threeBet: string; af: string };
-  tells: string[];
   tendencies: Tendencies;
   counter: Counter;
   preflop: PreflopExploit;
@@ -61,34 +61,32 @@ const GTO_T: Tendencies = { bet: ones, call: ones, raise: ones, riverBluff: 1, b
 export const ARCHETYPES: Record<Exclude<ArchetypeId, "pool">, Archetype> = {
   gto: {
     id: "gto",
-    name: "Solver Bot",
+    name: "Solver bot",
+    who: "a solver bot",
     emoji: "🤖",
     color: "#94a3b8",
-    blurb: "Plays the baseline strategy. You can't exploit it; you can only avoid losing to it.",
-    stats: { vpip: "24%", pfr: "20%", threeBet: "8%", af: "Balanced" },
-    tells: ["No tells: frequencies are balanced by design."],
+    blurb: "Plays a balanced strategy. You can't exploit it, you can only avoid losing to it.",
     tendencies: GTO_T,
     counter: {
       bet: ones,
       call: ones,
       raise: ones,
       sizeUp: false,
-      valueBet: "Play the baseline — no adjustment wins more against a balanced opponent.",
-      bluff: "Bluff at baseline frequency, choosing hands with the best blockers.",
-      facingBet: "Defend close to minimum defense frequency; don't over-fold.",
-      facingRaise: "Continue with your strongest hands and best draws at baseline frequency.",
+      valueBet: "Play your normal strategy. Nothing wins more against a balanced player.",
+      bluff: "Bluff at your normal rate, with hands that block their calls.",
+      facingBet: "Defend about as often as the math says, and don't over-fold.",
+      facingRaise: "Keep going with your strongest hands and best draws.",
       preflop: "Stick to the chart.",
     },
     preflop: { bluff3bets: "same", value3betWider: false, stealMore: false, respectAggression: false, defendWiderVs3bet: false },
   },
   station: {
     id: "station",
-    name: "Calling Station",
+    name: "Calling station",
+    who: "a calling station",
     emoji: "🐟",
     color: "#38bdf8",
-    blurb: "Calls far too much and rarely raises. Hates folding any pair or any draw.",
-    stats: { vpip: "45%+", pfr: "6%", threeBet: "2%", af: "< 1" },
-    tells: ["Limps and calls preflop a lot", "Calls flop bets with any piece", "Only bets when strong", "Rarely folds to a single bet"],
+    blurb: "Calls way too much and rarely raises. Hates folding any pair or any draw.",
     tendencies: {
       bet: m({ nutted: 0.7, strong: 0.6, medium: 0.5, weak: 0.3, drawStrong: 0.4, drawWeak: 0.25, air: 0.2 }),
       call: m({ nutted: 0.8, strong: 1.1, medium: 1.6, weak: 2.5, drawStrong: 1.4, drawWeak: 2.2, air: 3 }),
@@ -101,22 +99,21 @@ export const ARCHETYPES: Record<Exclude<ArchetypeId, "pool">, Archetype> = {
       call: m({ medium: 0.8, weak: 0.5, drawWeak: 0.9, air: 0.3 }),
       raise: m({ nutted: 1.3, strong: 1.2, medium: 0.6, weak: 0.3, drawStrong: 0.5, drawWeak: 0.3, air: 0.2 }),
       sizeUp: true,
-      valueBet: "Bet bigger and thinner. A station calls with second pair, so top pair is a three-street value hand.",
-      bluff: "Don't bluff. A station's calling range is too wide for bluffs to get enough folds.",
-      facingBet: "When a station finally bets, it's usually a real hand. Fold more of your marginal bluff-catchers.",
-      facingRaise: "A station's raise is the nuts or close to it. Fold one-pair hands.",
-      preflop: "Iso-raise their limps with value hands and size up. Skip light 3-bet bluffs; 3-bet strong hands wider for value.",
+      valueBet: "Bet bigger and thinner. They call with second pair, so top pair can bet all three streets.",
+      bluff: "Don't bluff. They call too much for a bluff to work.",
+      facingBet: "When they finally bet, they usually have it. Fold more of your close calls.",
+      facingRaise: "Their raise is the nuts or close to it. Fold one pair.",
+      preflop: "Raise their limps with good hands and size up. Skip light 3-bets, and 3-bet more of your strong hands for value.",
     },
     preflop: { bluff3bets: "less", value3betWider: true, stealMore: false, respectAggression: true, defendWiderVs3bet: false },
   },
   nit: {
     id: "nit",
     name: "Nit",
+    who: "a nit",
     emoji: "🪨",
     color: "#a3a3a3",
-    blurb: "Plays very few hands and folds to pressure. When a nit puts money in, they have it.",
-    stats: { vpip: "12%", pfr: "9%", threeBet: "3%", af: "Low" },
-    tells: ["Folds most hands preflop", "Gives up on the flop when missing", "Big bets are always value", "Rarely bluffs the river"],
+    blurb: "Plays very few hands and folds to pressure. When they put money in, they have it.",
     tendencies: {
       bet: m({ nutted: 1, strong: 0.9, medium: 0.5, weak: 0.3, drawStrong: 0.6, drawWeak: 0.3, air: 0.25 }),
       call: m({ strong: 0.9, medium: 0.6, weak: 0.35, drawStrong: 0.7, drawWeak: 0.4, air: 0.2 }),
@@ -129,22 +126,21 @@ export const ARCHETYPES: Record<Exclude<ArchetypeId, "pool">, Archetype> = {
       call: m({ strong: 0.85, medium: 0.55, weak: 0.4, drawStrong: 0.8, drawWeak: 0.6, air: 0.3 }),
       raise: m({ strong: 0.6, medium: 0.4, weak: 0.5, drawStrong: 1.2, drawWeak: 1.3, air: 1.4 }),
       sizeUp: false,
-      valueBet: "Value-bet only your strong hands. A nit won't pay off thin value with worse.",
-      bluff: "Bluff more — especially small c-bets and turn barrels. Nits fold everything that isn't strong.",
-      facingBet: "Respect their bets. Fold medium hands that would be calls against a balanced player.",
-      facingRaise: "A nit's raise is almost always two pair or better. Let one-pair hands go.",
-      preflop: "Steal their blinds relentlessly, but give their early-position opens and 3-bets a lot of respect.",
+      valueBet: "Only value bet your strong hands. They won't pay off thin bets.",
+      bluff: "Bluff more, especially with small c-bets and turn bets. They fold anything that isn't strong.",
+      facingBet: "Respect their bets. Fold medium hands you'd call against anyone else.",
+      facingRaise: "Their raise is almost always two pair or better. Let one pair go.",
+      preflop: "Steal their blinds all the time, but respect their early opens and their 3-bets.",
     },
     preflop: { bluff3bets: "less", value3betWider: false, stealMore: true, respectAggression: true, defendWiderVs3bet: false },
   },
   tag: {
     id: "tag",
-    name: "Solid Reg (TAG)",
+    name: "Solid regular",
+    who: "a solid regular",
     emoji: "🎯",
     color: "#22c55e",
-    blurb: "Tight-aggressive regular. Close to baseline, but under-bluffs big pots like most live players.",
-    stats: { vpip: "22%", pfr: "18%", threeBet: "7%", af: "Medium-high" },
-    tells: ["Standard open sizes", "C-bets often", "Big river bets lean to value", "Folds to 4-bets without premiums"],
+    blurb: "Tight and aggressive. Plays close to the chart, but doesn't bluff big pots enough, like most live players.",
     tendencies: {
       bet: m({ air: 0.9 }),
       call: m({ medium: 0.95, weak: 0.9 }),
@@ -157,22 +153,21 @@ export const ARCHETYPES: Record<Exclude<ArchetypeId, "pool">, Archetype> = {
       call: m({ medium: 0.9, weak: 0.9 }),
       raise: ones,
       sizeUp: false,
-      valueBet: "Close to baseline. Size up slightly with the nuts — regs pay off big hands when they have strong one-pair hands.",
-      bluff: "Turn barrels work well: regs often fold medium hands to the second bet.",
-      facingBet: "Slightly over-fold to big river bets — population under-bluffs large pots.",
-      facingRaise: "Respect turn and river raises; they're rarely bluffs in live games.",
-      preflop: "Play the chart. Steal a bit more if they defend blinds too tightly.",
+      valueBet: "Play it straight. Size up a little with the nuts, since regulars pay off with strong one pair hands.",
+      bluff: "Keep betting the turn. Regulars often fold medium hands to a second bet.",
+      facingBet: "Fold a bit more to big river bets. Most players don't bluff big pots enough.",
+      facingRaise: "Respect turn and river raises. They're rarely bluffs in live games.",
+      preflop: "Play the chart, and steal a bit more if they defend their blinds too tightly.",
     },
     preflop: { bluff3bets: "same", value3betWider: false, stealMore: false, respectAggression: false, defendWiderVs3bet: false },
   },
   lag: {
     id: "lag",
-    name: "Loose-Aggressive (LAG)",
+    name: "Loose-aggressive",
+    who: "a loose-aggressive player",
     emoji: "🔥",
     color: "#f97316",
-    blurb: "Plays lots of hands and applies pressure. Bluffs more than baseline.",
-    stats: { vpip: "30%", pfr: "25%", threeBet: "11%", af: "High" },
-    tells: ["Opens and 3-bets wide", "Barrels scare cards", "Raises draws often", "Takes stabs when checked to"],
+    blurb: "Plays lots of hands and keeps the pressure on. Bluffs more than they should.",
     tendencies: {
       bet: m({ nutted: 1.05, strong: 1.15, medium: 1.3, weak: 1.4, drawStrong: 1.3, drawWeak: 1.5, air: 1.6 }),
       call: m({ medium: 1.15, weak: 1.3, drawWeak: 1.2, air: 1.2 }),
@@ -185,22 +180,21 @@ export const ARCHETYPES: Record<Exclude<ArchetypeId, "pool">, Archetype> = {
       call: m({ strong: 1.1, medium: 1.35, weak: 1.6, drawStrong: 1.1, drawWeak: 1.2, air: 1.2 }),
       raise: m({ medium: 0.8, weak: 0.6, drawStrong: 0.9, drawWeak: 0.6, air: 0.5 }),
       sizeUp: false,
-      valueBet: "Check some strong hands to let them bluff. Their aggression builds the pot for you.",
-      bluff: "Bluff less — aggressive players fight back and call wider.",
-      facingBet: "Call down wider with medium hands. Their betting range has more air than baseline.",
-      facingRaise: "Continue a bit wider versus their raises, especially with strong draws and top pair.",
-      preflop: "3-bet them for value more linearly (AJ, KQ, TT) and call their 3-bets a bit wider in position.",
+      valueBet: "Check some strong hands and let them bluff. Their aggression builds the pot for you.",
+      bluff: "Bluff less. They fight back and call wider.",
+      facingBet: "Call down wider with medium hands. They're bluffing more often than they should.",
+      facingRaise: "Keep going a bit wider against their raises, especially with big draws and top pair.",
+      preflop: "3-bet them with more value hands like AJ, KQ and TT, and call their 3-bets a bit wider in position.",
     },
     preflop: { bluff3bets: "less", value3betWider: true, stealMore: false, respectAggression: false, defendWiderVs3bet: true },
   },
   maniac: {
     id: "maniac",
     name: "Maniac",
+    who: "a maniac",
     emoji: "🌪️",
     color: "#ef4444",
-    blurb: "Bets and raises almost everything, often with huge sizes. Terrifying and very profitable.",
-    stats: { vpip: "55%", pfr: "40%", threeBet: "18%", af: "Very high" },
-    tells: ["Raises most hands preflop", "Overbets and jams light", "Rarely checks when checked to", "Tilts after losing pots"],
+    blurb: "Bets and raises almost everything, often with huge sizes. Scary, and very profitable.",
     tendencies: {
       bet: m({ nutted: 1.1, strong: 1.3, medium: 1.7, weak: 2, drawStrong: 1.6, drawWeak: 2.2, air: 2.6 }),
       call: m({ medium: 1.4, weak: 1.8, drawWeak: 1.6, air: 1.8 }),
@@ -213,11 +207,11 @@ export const ARCHETYPES: Record<Exclude<ArchetypeId, "pool">, Archetype> = {
       call: m({ strong: 1.2, medium: 1.6, weak: 2, drawStrong: 1.2, drawWeak: 1.3, air: 1.2 }),
       raise: m({ nutted: 1.1, medium: 0.6, weak: 0.4, drawStrong: 0.8, drawWeak: 0.4, air: 0.3 }),
       sizeUp: false,
-      valueBet: "Check your big hands and let them bet for you. Don't scare them off.",
+      valueBet: "Check your big hands and let them bet for you.",
       bluff: "Almost never bluff. They don't fold and they re-raise.",
-      facingBet: "Call down much wider — second pair and even ace-high can be bluff-catchers here.",
-      facingRaise: "Their raises are wide. Continue with top pair and good draws.",
-      preflop: "Tighten your opens (you'll get 3-bet), then 4-bet and call off lighter with strong hands.",
+      facingBet: "Call down much wider. Second pair and even ace-high can be good calls here.",
+      facingRaise: "Their raises are wide. Keep going with top pair and good draws.",
+      preflop: "Open a bit tighter since you'll get 3-bet a lot, then 4-bet and get it in lighter with strong hands.",
     },
     preflop: { bluff3bets: "less", value3betWider: true, stealMore: false, respectAggression: false, defendWiderVs3bet: true },
   },
@@ -225,16 +219,15 @@ export const ARCHETYPES: Record<Exclude<ArchetypeId, "pool">, Archetype> = {
 
 /** "Pool" = the average opponent at the chosen stake. */
 export function poolArchetype(stake: StakeId): Archetype {
-  if (stake === "online") return { ...ARCHETYPES.gto, id: "pool", name: "Online Reg Pool", emoji: "💻" };
+  if (stake === "online") return { ...ARCHETYPES.gto, id: "pool", name: "Online regulars", who: "online regulars", emoji: "💻" };
   if (stake === "2-5") {
     return {
       id: "pool",
-      name: "$2/$5 Pool",
+      name: "$2/$5 table",
+      who: "a typical $2/$5 table",
       emoji: "🎰",
       color: "#eab308",
       blurb: "A mix of solid regulars and deep-stacked recreational players.",
-      stats: { vpip: "~30%", pfr: "~15%", threeBet: "~5%", af: "Medium" },
-      tells: ["Regs 3-bet more than at $1/$2", "Deep stacks", "River raises are strong"],
       tendencies: {
         bet: m({ medium: 0.85, weak: 0.7, drawStrong: 0.9, drawWeak: 0.75, air: 0.7 }),
         call: m({ medium: 1.1, weak: 1.3, drawWeak: 1.2, air: 1.3 }),
@@ -247,23 +240,22 @@ export function poolArchetype(stake: StakeId): Archetype {
         call: m({ medium: 0.9, weak: 0.8 }),
         raise: m({ air: 0.7 }),
         sizeUp: true,
-        valueBet: "Value-bet a little thinner and bigger than baseline; recreational players overcall.",
-        bluff: "Bluff slightly less on the river; turn stabs still work against regs.",
-        facingBet: "Big river bets are value-heavy — fold your weakest bluff-catchers.",
+        valueBet: "Bet a bit thinner and bigger. Recreational players call too much.",
+        bluff: "Bluff a little less on the river. Turn bets still work against regulars.",
+        facingBet: "Big river bets are usually value, so fold your weakest calls.",
         facingRaise: "Turn and river raises are strong. Don't pay them off with one pair.",
-        preflop: "Steal from tight regs, isolate recreational players, and respect 4-bets.",
+        preflop: "Steal from tight regulars, raise the recreational players out of position and respect 4-bets.",
       },
       preflop: { bluff3bets: "same", value3betWider: true, stealMore: true, respectAggression: true, defendWiderVs3bet: false },
     };
   }
   return {
     id: "pool",
-    name: "$1/$2 Pool",
+    name: "$1/$2 table",
+    who: "a typical $1/$2 table",
     emoji: "🎲",
     color: "#eab308",
-    blurb: "Loose-passive: lots of limping and calling, few bluffs. The classic low-stakes live table.",
-    stats: { vpip: "~40%", pfr: "~10%", threeBet: "~3%", af: "Low" },
-    tells: ["Open-limps", "Calls flop bets light", "Passive until they hit", "Big bets = big hands"],
+    blurb: "Loose and passive. Lots of limping and calling, very few bluffs. The classic low-stakes live game.",
     tendencies: {
       bet: m({ nutted: 0.9, strong: 0.9, medium: 0.7, weak: 0.5, drawStrong: 0.7, drawWeak: 0.5, air: 0.45 }),
       call: m({ strong: 1.05, medium: 1.3, weak: 1.8, drawStrong: 1.2, drawWeak: 1.6, air: 2 }),
@@ -276,11 +268,11 @@ export function poolArchetype(stake: StakeId): Archetype {
       call: m({ medium: 0.85, weak: 0.7, drawWeak: 0.9, air: 0.5 }),
       raise: m({ nutted: 1.2, medium: 0.7, weak: 0.5, drawWeak: 0.6, air: 0.4 }),
       sizeUp: true,
-      valueBet: "Value-bet thinner and bigger. The $1/$2 pool calls too much with worse.",
-      bluff: "Cut your bluffs, especially multiway and on the river. Semi-bluff only with real equity.",
-      facingBet: "Passive players bet when they have it. Fold more marginal hands to turn and river bets.",
-      facingRaise: "A $1/$2 raise on the turn or river is almost never a bluff.",
-      preflop: "Iso-raise limpers big with value hands, 3-bet for value (not as a bluff), and fold weak offsuit hands early.",
+      valueBet: "Bet thinner and bigger. Players at $1/$2 call too much with worse.",
+      bluff: "Cut your bluffs, especially in multiway pots and on the river. Only semi-bluff with real draws.",
+      facingBet: "Passive players bet when they have it. Fold more close hands to turn and river bets.",
+      facingRaise: "A turn or river raise at $1/$2 is almost never a bluff.",
+      preflop: "Raise limpers big with good hands, 3-bet for value instead of as a bluff and fold weak offsuit hands from early seats.",
     },
     preflop: { bluff3bets: "less", value3betWider: true, stealMore: false, respectAggression: true, defendWiderVs3bet: false },
   };

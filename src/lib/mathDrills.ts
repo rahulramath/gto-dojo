@@ -36,7 +36,7 @@ function genPotOdds(rnd: () => number): Q {
   return {
     prompt: `The pot is $${pot}. Your opponent bets $${bet} (${fracName(f)}). What equity do you need to call?`,
     ...shuffleOpts(c, wrong, rnd),
-    explain: `Call $${bet} to win $${pot + 2 * bet} total: ${bet} ÷ ${pot + 2 * bet} = ${c}.`,
+    explain: `You call $${bet} to win $${pot + 2 * bet} in total. ${bet} ÷ ${pot + 2 * bet} = ${c}.`,
   };
 }
 
@@ -46,24 +46,24 @@ function genMdf(rnd: () => number): Q {
   if (kind === 0) {
     const mdf = 1 / (1 + f);
     return {
-      prompt: `Facing a ${fracName(f)} bet, what's your minimum defense frequency?`,
+      prompt: `They bet ${fracName(f)}. How much of your range should keep playing?`,
       ...shuffleOpts(pct(mdf), [pct(f / (1 + f)), pct(f / (1 + 2 * f)), pct(Math.min(0.95, mdf + 0.12))], rnd),
-      explain: `MDF = pot ÷ (pot + bet) = 1 ÷ ${(1 + f).toFixed(2)} = ${pct(mdf)}.`,
+      explain: `Divide the pot by the pot plus the bet. 1 ÷ ${(1 + f).toFixed(2)} = ${pct(mdf)}.`,
     };
   }
   if (kind === 1) {
     const a = f / (1 + f);
     return {
-      prompt: `You bluff ${fracName(f)}. How often must they fold for the bluff to break even?`,
+      prompt: `You bluff ${fracName(f)}. How often do they need to fold for it to break even?`,
       ...shuffleOpts(pct(a), [pct(1 / (1 + f)), pct(f / (1 + 2 * f)), pct(Math.min(0.95, a + 0.1))], rnd),
-      explain: `Break-even fold % = bet ÷ (pot + bet) = ${f} ÷ ${(1 + f).toFixed(2)} = ${pct(a)}.`,
+      explain: `Divide the bet by the pot plus the bet. ${f} ÷ ${(1 + f).toFixed(2)} = ${pct(a)}.`,
     };
   }
   const b = f / (1 + 2 * f);
   return {
-    prompt: `On the river you bet ${fracName(f)} with a polarized range. What share of your bets should be bluffs to stay balanced?`,
+    prompt: `On the river you bet ${fracName(f)} with strong hands and bluffs. How many of your bets can be bluffs?`,
     ...shuffleOpts(pct(b), [pct(f / (1 + f)), pct(1 / (1 + f)), pct(Math.max(0.05, b - 0.1))], rnd),
-    explain: `Bluff share = bet ÷ (pot + 2×bet) = ${f} ÷ ${(1 + 2 * f).toFixed(2)} = ${pct(b)} — exactly the equity a caller needs.`,
+    explain: `Divide the bet by the pot plus two bets. ${f} ÷ ${(1 + 2 * f).toFixed(2)} = ${pct(b)}, the same equity a caller needs.`,
   };
 }
 
@@ -79,12 +79,12 @@ function genOuts(rnd: () => number): Q {
     const eight = d.oesd || d.doubleGut;
     if (!d.flushDraw && !eight && !d.gutshot) continue;
     const outs = (d.flushDraw ? 9 : 0) + (eight ? (d.flushDraw ? 6 : 8) : d.gutshot ? (d.flushDraw ? 3 : 4) : 0);
-    const name = [d.flushDraw ? "flush draw" : "", d.oesd ? "open-ended straight draw" : d.doubleGut ? "double gutshot" : d.gutshot ? "gutshot" : ""].filter(Boolean).join(" + ");
+    const name = [d.flushDraw ? "flush draw" : "", d.oesd ? "open-ended straight draw" : d.doubleGut ? "double gutshot" : d.gutshot ? "gutshot" : ""].filter(Boolean).join(" and a ");
     return {
       prompt: "How many clean outs does this hand have to a flush or straight?",
       cards: { hero, board },
       ...shuffleOpts(String(outs), [String(outs + 1), String(Math.max(2, outs - 1)), String(outs + 3), String(Math.max(2, outs - 4)), "6"], rnd),
-      explain: `${name[0].toUpperCase()}${name.slice(1)}: ${outs} outs (flush draws have 9, open-enders 8, gutshots 4; combos subtract overlapping cards). Rule of 4: ~${Math.min(100, outs * 4)}% by the river.`,
+      explain: `With ${/^[aeiou]/.test(name) ? "an" : "a"} ${name}, you have ${outs} outs. Flush draws have 9, open-enders 8 and gutshots 4, minus any cards that overlap. That's about ${Math.min(100, outs * 4)}% by the river.`,
     };
   }
   return genPotOdds(rnd);
@@ -92,18 +92,18 @@ function genOuts(rnd: () => number): Q {
 
 function genCombos(rnd: () => number): Q {
   const bank: { p: string; a: number; e: string; w: number[] }[] = [
-    { p: "How many combinations of AK (suited + offsuit) are there?", a: 16, e: "4 aces × 4 kings = 16 (4 suited, 12 offsuit).", w: [12, 4, 8] },
-    { p: "How many combos of any specific pocket pair (e.g. JJ)?", a: 6, e: "Choose 2 of 4 suits: 6.", w: [4, 12, 3] },
-    { p: "How many combos of a specific suited hand (e.g. T9s)?", a: 4, e: "One per suit: 4.", w: [6, 12, 16] },
-    { p: "You hold an ace. How many AA combos remain for your opponent?", a: 3, e: "3 aces left: C(3,2) = 3.", w: [6, 1, 4] },
-    { p: "You hold an ace. How many AK combos remain?", a: 12, e: "3 aces × 4 kings = 12.", w: [16, 9, 6] },
-    { p: "You hold A♠. How many AKo combos remain?", a: 9, e: "3 aces × 4 kings = 12 AK, minus 3 suited = 9 offsuit.", w: [12, 6, 3] },
-    { p: "Board has a 7. How many combos of pocket sevens (a set) are possible?", a: 3, e: "3 sevens left: C(3,2) = 3.", w: [6, 1, 4] },
-    { p: "Board is K♣Q♦4♠. How many KQ (top two pair) combos exist?", a: 9, e: "3 kings × 3 queens = 9.", w: [16, 12, 6] },
-    { p: "Board is A♥7♦2♣. How many AA combos are possible?", a: 3, e: "One ace is on board: C(3,2) = 3.", w: [6, 1, 4] },
-    { p: "How many total starting-hand combos are there?", a: 1326, e: "C(52,2) = 1,326.", w: [169, 2652, 1024] },
-    { p: "How many offsuit combos does any non-pair hand have?", a: 12, e: "4 × 3 = 12.", w: [16, 4, 8] },
-    { p: "Board has two hearts. How many combos of a specific suited heart hand (e.g. A♥5♥) are possible?", a: 1, e: "Only one combo can be both hearts: A♥5♥.", w: [4, 3, 2] },
+    { p: "How many AK combos are there, suited and offsuit?", a: 16, e: "4 aces times 4 kings is 16. That's 4 suited and 12 offsuit.", w: [12, 4, 8] },
+    { p: "How many combos does a pocket pair like JJ have?", a: 6, e: "Pick 2 of the 4 suits, which gives you 6.", w: [4, 12, 3] },
+    { p: "How many combos does a suited hand like T9s have?", a: 4, e: "One for each suit, so 4.", w: [6, 12, 16] },
+    { p: "You hold an ace. How many AA combos can your opponent have?", a: 3, e: "Only 3 aces are left, which makes 3 combos.", w: [6, 1, 4] },
+    { p: "You hold an ace. How many AK combos are left?", a: 12, e: "3 aces times 4 kings is 12.", w: [16, 9, 6] },
+    { p: "You hold A♠. How many AKo combos are left?", a: 9, e: "There are 12 AK combos left and 3 of them are suited, so 9 are offsuit.", w: [12, 6, 3] },
+    { p: "There's a 7 on the board. How many combos of pocket sevens are possible?", a: 3, e: "Only 3 sevens are left, which makes 3 combos.", w: [6, 1, 4] },
+    { p: "The board is K♣Q♦4♠. How many KQ combos are possible?", a: 9, e: "3 kings times 3 queens is 9.", w: [16, 12, 6] },
+    { p: "The board is A♥7♦2♣. How many AA combos are possible?", a: 3, e: "One ace is on the board, so 3 are left, which makes 3 combos.", w: [6, 1, 4] },
+    { p: "How many different two-card starting hands are there?", a: 1326, e: "52 cards make 1,326 different two-card hands.", w: [169, 2652, 1024] },
+    { p: "How many offsuit combos does a hand like KQ have?", a: 12, e: "4 suits for the king times 3 other suits for the queen is 12.", w: [16, 4, 8] },
+    { p: "How many ways can someone hold exactly A♥5♥?", a: 1, e: "There's only one A♥ and one 5♥, so just 1.", w: [4, 3, 2] },
   ];
   const q = bank[Math.floor(rnd() * bank.length)];
   return { prompt: q.p, ...shuffleOpts(String(q.a), q.w.map(String), rnd), explain: q.e };
@@ -143,11 +143,11 @@ function genEquity(rnd: () => number): Q {
   const correct = bucket(eq);
   const opts = ["About 80 / 20", "About 70 / 30", "About 55 / 45", "About 50 / 50"];
   return {
-    prompt: `${cardsPretty(h1)} vs ${cardsPretty(h2)} all-in preflop. How close is it?`,
+    prompt: `${cardsPretty(h1)} against ${cardsPretty(h2)}, all-in preflop. How close is it?`,
     cards: { hero: h1, villain: h2 },
     options: opts,
     answer: opts.indexOf(correct),
-    explain: `${fav} is the favorite: ${pct(Math.max(eq, 1 - eq), 1)} vs ${pct(Math.min(eq, 1 - eq), 1)}. Pair vs two overcards is ~55/45, dominated hands ~70/30+, pair vs lower pair ~80/20.`,
+    explain: `${fav} is ahead, ${pct(Math.max(eq, 1 - eq), 1)} to ${pct(Math.min(eq, 1 - eq), 1)}. A pair against two overcards is about 55/45, a dominated hand is 70/30 or worse, and a pair against a smaller pair is about 80/20.`,
   };
 }
 
@@ -159,9 +159,9 @@ function genEv(rnd: () => number): Q {
   const ev = fold * pot - (1 - fold) * bet;
   const fmt = (x: number) => `${x >= 0 ? "+" : "−"}$${Math.abs(Math.round(x))}`;
   return {
-    prompt: `Pot $${pot}. You bluff $${bet} with a hand that never wins at showdown. They fold ${pct(fold)}. What's the bluff's EV?`,
+    prompt: `The pot is $${pot}. You bluff $${bet} with a hand that never wins at showdown, and they fold ${pct(fold)} of the time. What's the bluff worth?`,
     ...shuffleOpts(fmt(ev), [fmt(fold * pot), fmt(-ev), fmt(ev + bet * 0.5), fmt(fold * (pot + bet) - bet)], rnd),
-    explain: `EV = fold% × pot − call% × bet = ${fold} × ${pot} − ${(1 - fold).toFixed(1)} × ${bet} = ${fmt(ev)}. Break-even fold rate here is ${pct(bet / (pot + bet))}.`,
+    explain: `You win the pot when they fold and lose your bet when they call. ${fold} × ${pot} − ${(1 - fold).toFixed(1)} × ${bet} = ${fmt(ev)}. It breaks even when they fold ${pct(bet / (pot + bet))} of the time.`,
   };
 }
 

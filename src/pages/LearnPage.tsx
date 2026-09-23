@@ -55,7 +55,7 @@ function Lesson({ day }: { day: Day }) {
     const r = useStore.getState().completeLesson(day.day, Math.max(score, quizBest[day.day] ?? 0));
     announce(r);
     const belt = day.boss ? BELTS.find((b) => b.id === phase.belt) : null;
-    if (belt && !done) useUi.getState().celebrate({ kind: "belt", title: `${belt.name} belt earned`, body: `${phase.name} complete.`, icon: "🥋", belt });
+    if (belt && !done) useUi.getState().celebrate({ kind: "belt", title: `You earned your ${belt.name.toLowerCase()} belt`, body: phase.id === PHASES.length ? "You finished the whole path." : "Great work. On to the next phase.", icon: "🥋", belt });
     else useUi.getState().burst();
     play("level");
     navigate("/learn");
@@ -93,7 +93,7 @@ function Lesson({ day }: { day: Day }) {
                   <p className="t-body animate-fadeUp rounded-xl bg-white/[0.04] p-4">{day.sections[step.idx].more}</p>
                 ) : (
                   <button className="btn-text -ml-4" onClick={() => setMore(true)}>
-                    Go deeper
+                    Tell me more
                   </button>
                 )}
               </div>
@@ -131,7 +131,10 @@ function Lesson({ day }: { day: Day }) {
                     disabled={picked !== null}
                     onClick={() => {
                       setPicked(k);
-                      if (right) setScore((s) => s + 1);
+                      if (right) {
+                        setScore((s) => s + 1);
+                        announce(useStore.getState().bump("reasonRight"));
+                      }
                       play(right ? "perfect" : "bad");
                     }}
                     className={`flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl border px-4 text-left text-base font-medium text-ink-100 transition ${cls}`}
@@ -161,7 +164,7 @@ function Lesson({ day }: { day: Day }) {
             {!passed ? (
               <>
                 <h1 className="t-headline">Almost there</h1>
-                <p className="t-body">You got {score} of {day.quiz.length}. Review the ideas and try the questions again.</p>
+                <p className="t-body">You got {score} of {day.quiz.length} right. Go through the ideas again and give it another try.</p>
                 <button
                   className="btn-filled btn-lg w-full"
                   onClick={() => {
@@ -176,7 +179,7 @@ function Lesson({ day }: { day: Day }) {
               <>
                 <div>
                   <div className="t-label">Day {day.day}</div>
-                  <h1 className="t-headline mt-2">{done ? "Day complete" : day.drill ? "Now put it into practice" : "Lesson learned"}</h1>
+                  <h1 className="t-headline mt-2">{done ? "Day complete" : day.drill ? "Now try it at the table" : "Nice, lesson done"}</h1>
                 </div>
                 <div className="card !p-4">
                   <ListRow icon={Check} tone="#22c55e" title="Learn" subtitle={`${day.sections.length} ideas · quiz passed`} trailing={<Check size={20} className="text-emerald-400" />} />
@@ -185,7 +188,7 @@ function Lesson({ day }: { day: Day }) {
                       icon={Play}
                       tone={ds.done ? "#22c55e" : "#f2c14e"}
                       title={day.drill.label}
-                      subtitle={ds.done ? "Passed" : `${day.drill.target} ${day.drill.url.startsWith("/math") ? "questions" : "decisions"} at ${Math.round(day.drill.acc * 100)}%${ds.n ? ` · last try ${Math.round(ds.acc * 100)}%` : ""}`}
+                      subtitle={ds.done ? "Passed" : `${day.drill.target} ${day.drill.url.startsWith("/math") ? "questions" : "decisions"}, ${Math.round(day.drill.acc * 100)}% to pass${ds.n ? ` · last try ${Math.round(ds.acc * 100)}%` : ""}`}
                       trailing={ds.done ? <Check size={20} className="text-emerald-400" /> : undefined}
                     />
                   )}
@@ -202,7 +205,7 @@ function Lesson({ day }: { day: Day }) {
                   </button>
                 ) : (
                   <button className="btn-filled btn-lg w-full" onClick={finish}>
-                    {done ? "Back to path" : day.boss ? "Claim your belt" : "Finish day"}
+                    {done ? "Back to lessons" : day.boss ? "Claim your belt" : "Finish the day"}
                   </button>
                 )}
                 <button className="btn-text w-full" onClick={() => setI(0)}>
@@ -268,7 +271,7 @@ export function LearnPage() {
                 <span className="min-w-0 flex-1">
                   <span className="t-title block truncate">{ph.name}</span>
                   <span className="t-label">
-                    Days {days[0].day}–{days[days.length - 1].day} · {phDone}/{days.length} done
+                    Days {days[0].day} to {days[days.length - 1].day} · {phDone} of {days.length} done
                   </span>
                 </span>
                 <ChevronDown size={20} className={`shrink-0 text-ink-400 transition ${isOpen ? "rotate-180" : ""}`} />

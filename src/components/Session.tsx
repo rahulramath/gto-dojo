@@ -33,10 +33,10 @@ export function SessionBar({ done, total, onClose, label }: { done: number; tota
 
 function verdictFor(score: number, total: number): string {
   const r = score / total;
-  if (r === 1) return "Flawless!";
+  if (r === 1) return "Perfect session!";
   if (r >= 0.8) return "Great session";
-  if (r >= 0.6) return "Solid work";
-  return "Good reps — keep going";
+  if (r >= 0.6) return "Nice work";
+  return "Good practice. Keep at it.";
 }
 
 export function SessionSummary({
@@ -94,7 +94,7 @@ export function SessionSummary({
               setCopied(true);
             }}
           >
-            {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? "Copied — share it" : "Copy result to share"}
+            {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? "Copied. Paste it anywhere." : "Copy your result"}
           </button>
         )}
       </div>
@@ -110,7 +110,7 @@ export function SessionSummary({
               </div>
             ))}
           </div>
-          <p className="t-label mt-2">These come back in your Mistakes review until you get them right.</p>
+          <p className="t-label mt-2">You'll see these again in Fix your mistakes until you get them right.</p>
         </div>
       )}
 

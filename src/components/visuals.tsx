@@ -95,7 +95,7 @@ export function StrengthMeter({ eq, bucket }: { eq: number; bucket: Bucket }) {
       </div>
       <div className="t-label mt-1 flex justify-between">
         <span>Behind</span>
-        <span>vs their range</span>
+        <span>against their range</span>
         <span>Ahead</span>
       </div>
     </div>
@@ -183,7 +183,7 @@ function OpenWidthBars() {
           <span className="num t-label w-10 text-right text-ink-100">{Math.round(r.v)}%</span>
         </div>
       ))}
-      <div className="t-label">Share of hands each seat opens (6-max, 100bb)</div>
+      <div className="t-label">How often each seat opens at 6-max with 100bb stacks</div>
     </div>
   );
 }
@@ -201,9 +201,9 @@ function BigNumber({ n, label, cards }: { n: string; label: string; cards: strin
 function CombosVisual() {
   return (
     <div className="flex w-full gap-2">
-      <BigNumber n="6" label="Each pair" cards="A♠A♥ A♠A♦ …" />
-      <BigNumber n="4" label="Suited" cards="A♠K♠ A♥K♥ …" />
-      <BigNumber n="12" label="Offsuit" cards="A♠K♥ A♦K♣ …" />
+      <BigNumber n="6" label="Each pair" cards="A♠A♥, A♠A♦" />
+      <BigNumber n="4" label="Suited" cards="A♠K♠, A♥K♥" />
+      <BigNumber n="12" label="Offsuit" cards="A♠K♥, A♦K♣" />
     </div>
   );
 }
@@ -224,7 +224,7 @@ function BlockersVisual() {
         })}
       </div>
       <div className="t-body mt-2">
-        <span className="font-semibold text-emerald-300">6 → 3 combos.</span> One ace cuts their aces in half.
+        <span className="font-semibold text-emerald-300">6 combos become 3.</span> One ace cuts their aces in half.
       </div>
     </div>
   );
@@ -247,7 +247,7 @@ function PotOddsVisual({ frac = 0.5 }: { frac?: number }) {
         </div>
       </div>
       <div className="t-body mt-2">
-        You pay {Math.round(frac * 100)} to win {Math.round(total * 100)} → need <span className="num font-semibold text-gold-300">{pct(need)}</span> equity.
+        You pay {Math.round(frac * 100)} to win {Math.round(total * 100)}, so you need <span className="num font-semibold text-gold-300">{pct(need)}</span> equity.
       </div>
     </div>
   );
@@ -263,7 +263,7 @@ function MdfVisual({ frac = 0.5 }: { frac?: number }) {
         </div>
         <div className="flex flex-1 items-center justify-center bg-white/10 text-ink-200">Fold</div>
       </div>
-      <div className="t-label mt-2">Facing a {Math.round(frac * 100)}% pot bet: defend at least this much of your range.</div>
+      <div className="t-label mt-2">Against a {Math.round(frac * 100)}% pot bet, keep playing at least this much of your range.</div>
     </div>
   );
 }
@@ -289,7 +289,7 @@ function OutsVisual() {
         ))}
       </div>
       <div className="t-body">
-        <span className="font-semibold text-gold-300">9 outs</span> · ~19% on the turn · ~35% by the river
+        <span className="font-semibold text-gold-300">9 outs.</span> About 19% to hit on the turn and 35% by the river.
       </div>
     </div>
   );
@@ -317,8 +317,8 @@ function Rule24Visual() {
 
 function TextureVisual() {
   const boards: [string, string, string][] = [
-    ["Ks7d2c", "Dry", "Few draws — bet small, often"],
-    ["JhTh8c", "Wet", "Lots of draws — bet bigger, less often"],
+    ["Ks7d2c", "Dry", "Few draws. Bet small and often."],
+    ["JhTh8c", "Wet", "Lots of draws. Bet bigger, less often."],
   ];
   return (
     <div className="grid w-full grid-cols-2 gap-2">
@@ -359,9 +359,9 @@ function RangeAdvVisual() {
 
 function SprVisual() {
   const bands = [
-    { l: "SPR under 3", d: "Top pair is often a stack-off", c: "#f87171" },
-    { l: "SPR 3–8", d: "One pair: proceed with care", c: "#fbbf24" },
-    { l: "SPR over 8", d: "Big pots need big hands", c: "#4ade80" },
+    { l: "Stack under 3x the pot", d: "Top pair often plays for your stack", c: "#f87171" },
+    { l: "Stack 3 to 8x the pot", d: "Go carefully with one pair", c: "#fbbf24" },
+    { l: "Stack over 8x the pot", d: "Big pots need big hands", c: "#4ade80" },
   ];
   return (
     <div className="w-full space-y-2">
@@ -413,9 +413,9 @@ function ArchetypesVisual() {
 
 function LiveSizesVisual() {
   const items = [
-    ["Open", "$10–15"],
-    ["Iso-raise", "$15 + $5 / limper"],
-    ["3-bet", "3× in position · 4× out"],
+    ["Open", "$10 to $15"],
+    ["Raise over limpers", "$15, plus $5 per limper"],
+    ["3-bet", "3x in position, 4x out of position"],
   ];
   return (
     <div className="grid w-full gap-2 sm:grid-cols-3">

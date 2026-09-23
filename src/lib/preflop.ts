@@ -1,5 +1,5 @@
 import { rfiChart, vs3betChart, vs4betChart, vsLimpChart, vsOpenChart } from "../data/charts";
-import { isInPositionOn, posLabel, positionsFor, POS_INFO, type PosId, type TableSize } from "../data/positions";
+import { isInPositionOn, posLabel, positionsFor, type PosId, type TableSize } from "../data/positions";
 import type { SizingStyle, Stake } from "../data/stakes";
 import type { Archetype } from "../data/archetypes";
 import { ALL_HANDS, comboCount, gridHand, handGridPos, randomCombo, type Card, type HandClass } from "./cards";
@@ -12,12 +12,12 @@ import { pick, weightedPick, type Rng } from "./rng";
 
 export type SpotKind = "rfi" | "vsOpen" | "vs3bet" | "vs4bet" | "vsLimp";
 
-export const SPOT_KINDS: { id: SpotKind; label: string; desc: string }[] = [
-  { id: "rfi", label: "Open (RFI)", desc: "Folded to you — raise or fold?" },
-  { id: "vsOpen", label: "Facing an open", desc: "Someone raised — 3-bet, call, or fold?" },
-  { id: "vs3bet", label: "Facing a 3-bet", desc: "You opened and got re-raised." },
-  { id: "vs4bet", label: "Facing a 4-bet", desc: "You 3-bet and they came back over the top." },
-  { id: "vsLimp", label: "Limpers (live)", desc: "Iso-raise, over-limp, or fold?" },
+export const SPOT_KINDS: { id: SpotKind; label: string }[] = [
+  { id: "rfi", label: "Opening" },
+  { id: "vsOpen", label: "Facing a raise" },
+  { id: "vs3bet", label: "Facing a 3-bet" },
+  { id: "vs4bet", label: "Facing a 4-bet" },
+  { id: "vsLimp", label: "Limpers" },
 ];
 
 export interface SeatView {
@@ -48,7 +48,7 @@ export interface PreflopSpot {
   hand: HandClass;
   cards: [Card, Card];
   chart: Chart;
-  /** Range hero arrived with (for 3-bet/4-bet spots) — null means any hand. */
+  /** Range hero arrived with in 3-bet and 4-bet spots. Null means any hand. */
   heroRange: Weights | null;
   /** Range the aggressor/limper represents. */
   villainRange: Weights | null;
@@ -58,8 +58,6 @@ export interface PreflopSpot {
   toCallBB: number;
   heroInBB: number;
   seats: SeatView[];
-  log: string[];
-  headline: string;
 }
 
 export interface SpotRequest {
@@ -192,14 +190,12 @@ export function generateSpot(opts: GenOptions): PreflopSpot {
     const folded = new Set<PosId>();
     contrib.set("SB", 0.5);
     contrib.set("BB", 1);
-    const log: string[] = [];
     let chart: Chart | undefined;
     let heroRange: Weights | null = null;
     let villainRange: Weights | null = null;
     let villainRangeLabel = "";
     let villain: PosId | undefined;
     let limpers: PosId[] = [];
-    let headline = "";
     const options: ActionOption[] = [];
     const heroBlind = hero === "SB" ? 0.5 : hero === "BB" ? 1 : 0;
 
@@ -210,7 +206,6 @@ export function generateSpot(opts: GenOptions): PreflopSpot {
       chart = rfiChart(hero);
       if (!chart) continue;
       before.forEach((p) => folded.add(p));
-      if (before.length) log.push(before.length === 1 ? `${L(before[0])} folds` : `${before.length} players fold`);
       const open = openSize(hero);
       options.push({ key: "fold", label: "Fold", toBB: heroBlind, costBB: 0 });
       if (hero !== "SB") options.push({ key: "call", label: "Limp", toBB: 1, costBB: 1 });
@@ -224,9 +219,8 @@ export function generateSpot(opts: GenOptions): PreflopSpot {
           if (v > 0) w[h] = v;
         }
         villainRange = w;
-        villainRangeLabel = "BB's defending range";
+        villainRangeLabel = "the big blind's defending range";
       }
-      headline = before.length ? `Folded to you in the ${POS_INFO[hero].name}` : `You're first to act (${POS_INFO[hero].name})`;
     } else if (kind === "vsOpen") {
       const openers = opts.request?.villain ? [opts.request.villain] : before;
       if (!openers.length) continue;
@@ -238,14 +232,12 @@ export function generateSpot(opts: GenOptions): PreflopSpot {
       order.slice(order.indexOf(villain) + 1, hi).forEach((p) => folded.add(p));
       contrib.set(villain, open);
       actions.set(villain, `Raise ${amt(open)}`);
-      log.push(`${L(villain)} raises to ${amt(open)}`);
       const three = threeBetTo(hero, villain);
       options.push({ key: "fold", label: "Fold", toBB: heroBlind, costBB: 0 });
       options.push({ key: "call", label: "Call", toBB: open, costBB: open - heroBlind });
-      options.push({ key: "raise", label: "3-Bet", toBB: three, costBB: three - heroBlind });
+      options.push({ key: "raise", label: "3-bet", toBB: three, costBB: three - heroBlind });
       villainRange = actionWeights(rfiChart(villain)!, "raise");
       villainRangeLabel = `${L(villain)}'s opening range`;
-      headline = `${L(villain)} opens to ${amt(open)}. You're in the ${POS_INFO[hero].name}.`;
     } else if (kind === "vs3bet") {
       if (hero === "BB" || !after.length) continue;
       const tbs = opts.request?.villain ? [opts.request.villain] : after;
@@ -262,14 +254,12 @@ export function generateSpot(opts: GenOptions): PreflopSpot {
       order.forEach((p) => p !== hero && p !== villain && folded.add(p));
       contrib.set(hero, open);
       contrib.set(villain, three);
-      actions.set(villain, `3-Bet ${amt(three)}`);
-      log.push(`You raise to ${amt(open)}`, `${L(villain)} 3-bets to ${amt(three)}`);
+      actions.set(villain, `3-bet ${amt(three)}`);
       options.push({ key: "fold", label: "Fold", toBB: open, costBB: 0 });
       options.push({ key: "call", label: "Call", toBB: three, costBB: three - open });
-      options.push({ key: "raise", label: "4-Bet", toBB: four, costBB: four - open });
+      options.push({ key: "raise", label: "4-bet", toBB: four, costBB: four - open });
       villainRange = actionWeights(vo, "raise");
       villainRangeLabel = `${L(villain)}'s 3-bet range`;
-      headline = `You opened ${L(hero)} to ${amt(open)}. ${L(villain)} 3-bets to ${amt(three)}.`;
     } else if (kind === "vs4bet") {
       const openers = opts.request?.villain ? [opts.request.villain] : before;
       if (!openers.length) continue;
@@ -279,20 +269,17 @@ export function generateSpot(opts: GenOptions): PreflopSpot {
       if (!vo || !v3) continue;
       chart = vs4betChart(hero, villain);
       heroRange = actionWeights(vo, "raise");
-      const open = openSize(villain);
       const three = threeBetTo(hero, villain);
       const four = Math.min(stack, fourBetTo(villain, hero, three));
       order.forEach((p) => p !== hero && p !== villain && folded.add(p));
       contrib.set(villain, four);
       contrib.set(hero, three);
-      actions.set(villain, `4-Bet ${amt(four)}`);
-      log.push(`${L(villain)} raises to ${amt(open)}`, `You 3-bet to ${amt(three)}`, `${L(villain)} 4-bets to ${amt(four)}`);
+      actions.set(villain, `4-bet ${amt(four)}`);
       options.push({ key: "fold", label: "Fold", toBB: three, costBB: 0 });
       options.push({ key: "call", label: "Call", toBB: four, costBB: four - three });
-      options.push({ key: "allin", label: "5-Bet All-in", toBB: stack, costBB: stack - three });
+      options.push({ key: "allin", label: "All-in", toBB: stack, costBB: stack - three });
       villainRange = actionWeights(v3, "raise");
       villainRangeLabel = `${L(villain)}'s 4-bet range`;
-      headline = `${L(villain)} opened, you 3-bet to ${amt(three)}, and ${L(villain)} 4-bets to ${amt(four)}.`;
     } else {
       const pool = before.filter((p) => p !== "SB");
       if (!pool.length) continue;
@@ -307,7 +294,6 @@ export function generateSpot(opts: GenOptions): PreflopSpot {
       limpers.forEach((p) => {
         contrib.set(p, 1);
         actions.set(p, "Limp");
-        log.push(`${L(p)} limps`);
       });
       const iso = round(sz.iso + sz.isoPer * (limpers.length - 1) + (hero === "SB" || hero === "BB" ? 1 : 0));
       if (hero === "BB") {
@@ -316,11 +302,10 @@ export function generateSpot(opts: GenOptions): PreflopSpot {
       } else {
         options.push({ key: "fold", label: "Fold", toBB: heroBlind, costBB: 0 });
         options.push({ key: "call", label: hero === "SB" ? "Complete" : "Over-limp", toBB: 1, costBB: 1 - heroBlind });
-        options.push({ key: "raise", label: "Iso-Raise", toBB: iso, costBB: iso - heroBlind });
+        options.push({ key: "raise", label: "Iso-raise", toBB: iso, costBB: iso - heroBlind });
       }
       villainRange = LIMP_RANGE;
-      villainRangeLabel = "a typical live limping range";
-      headline = `${limpers.length === 1 ? "One player limps" : `${limpers.length} players limp`}. You're in the ${POS_INFO[hero].name}.`;
+      villainRangeLabel = "a typical limping range";
     }
     if (!chart) continue;
 
@@ -368,8 +353,6 @@ export function generateSpot(opts: GenOptions): PreflopSpot {
       toCallBB: toCall,
       heroInBB: heroIn,
       seats,
-      log,
-      headline,
     };
   }
   throw new Error("Could not generate a preflop spot for these filters");
@@ -454,11 +437,11 @@ export function preflopExploit(spot: PreflopSpot, arch: Archetype): ExploitVerdi
     if (p.stealMore && late && raise < 0.9 && feat.equity >= 47) {
       f.raise = 1;
       f.fold = 0;
-      note = "The players behind fold their blinds too often. Steal wider — this hand becomes a clear open.";
+      note = "The players behind give up their blinds too easily, so steal wider. This hand becomes an easy open.";
     } else if (p.value3betWider && p.respectAggression && early && !feat.suited && !feat.pair && raise > 0 && raise < 0.9) {
       f.fold = (f.fold ?? 0) + raise;
       f.raise = 0;
-      note = "Loose, sticky players behind turn weak offsuit opens into multiway pots out of position. Fold the bottom of your early range.";
+      note = "Loose players behind will call and drag weak offsuit hands into big multiway pots. Fold the bottom of your early range.";
     }
   } else if (spot.kind === "vsOpen") {
     const bluffy = raise > 0 && feat.category !== "premium" && feat.category !== "strong";
@@ -467,13 +450,13 @@ export function preflopExploit(spot: PreflopSpot, arch: Archetype): ExploitVerdi
       if (moveToCall) f.call = call + raise;
       else f.fold = fold + raise;
       f.raise = 0;
-      note = "Light 3-bets need folds, and this opponent doesn't fold enough. Flat or fold these bluffs instead.";
+      note = "Light 3-bets only work if they fold, and this player doesn't fold enough. Call or fold these hands instead.";
     }
     if (p.value3betWider && feat.category === "strong" && raise < 0.7) {
       f.raise = 0.9;
       if (canCall) f.call = 0.1;
       f.fold = 0;
-      note = "3-bet for value: this opponent calls 3-bets with worse hands like AJ, KQ and small pairs.";
+      note = "3-bet this for value. This player calls 3-bets with worse hands like AJ, KQ and small pairs.";
     }
   } else if (spot.kind === "vs3bet") {
     if (p.respectAggression && feat.category !== "premium") {
@@ -485,12 +468,12 @@ export function preflopExploit(spot: PreflopSpot, arch: Archetype): ExploitVerdi
         f.fold = (f.fold ?? 0) + call * 0.7;
         f.call = call * 0.3;
       }
-      note = "This player's 3-bets are value-heavy (often QQ+ or AK). Skip 4-bet bluffs and let marginal hands go.";
+      note = "This player's 3-bets are usually QQ+ or AK. Skip the 4-bet bluffs and let close hands go.";
     }
     if (p.defendWiderVs3bet && feat.category !== "other" && fold > 0.3) {
       f.call = call + fold * 0.7;
       f.fold = fold * 0.3;
-      note = "They 3-bet too light. Defend wider — mostly by calling, especially in position.";
+      note = "They 3-bet too light. Defend wider, mostly by calling, and especially when you have position.";
     }
   } else if (spot.kind === "vs4bet") {
     if (p.respectAggression && feat.category !== "premium") {
@@ -510,7 +493,7 @@ export function preflopExploit(spot: PreflopSpot, arch: Archetype): ExploitVerdi
       f.call = 0;
       f.fold = 0;
       f.check = 0;
-      note = "Limpers call raises with dominated hands. Iso-raise big for value.";
+      note = "Limpers call raises with weaker hands, so raise big and get paid.";
     }
   }
 
