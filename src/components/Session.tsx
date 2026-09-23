@@ -1,7 +1,8 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Check, Copy, Flame, X } from "lucide-react";
 import { ProgressBar, Ring } from "./ui";
 import { useStore } from "../store/store";
+import { maybeRequestPersist } from "../lib/storage";
 
 export interface SessionResult {
   ok: boolean;
@@ -63,6 +64,9 @@ export function SessionSummary({
   const dayStreak = useStore((s) => s.streak.current);
   const misses = results.filter((r) => !r.ok);
   const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    void maybeRequestPersist();
+  }, []);
   return (
     <div className="mx-auto w-full max-w-md animate-fadeUp py-6">
       <div className="card text-center">

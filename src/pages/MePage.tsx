@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from "react";
-import { Download, Flame, Grid3x3, Hand, Percent, RotateCcw, Target, Upload, Users, Wallet } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Download, Flame, Grid3x3, Hand, Percent, RotateCcw, Shield, ShieldCheck, Target, Upload, Users, Wallet } from "lucide-react";
 import { useStore, type DecisionLog } from "../store/store";
 import { ACHIEVEMENTS, type Achievement, type AchState } from "../data/achievements";
 import { ALL_POSITIONS, posLabel, POS_INFO, type PosId } from "../data/positions";
@@ -10,6 +10,7 @@ import { navigate } from "../lib/router";
 import { useUi } from "../store/ui";
 import { BeltBadge, ListRow, PageHeader, ProgressBar, Ring, SectionHeader, Segmented, Sheet, StatTile, Switch } from "../components/ui";
 import { pct } from "../lib/format";
+import { isPersisted, requestPersist } from "../lib/storage";
 
 const PRE_VERB: Record<string, Record<string, string>> = {
   rfi: { raise: "open", call: "limp", fold: "fold" },
@@ -78,6 +79,22 @@ export function MePage() {
     .map((x) => x.a);
   const featured = [...got.slice(0, 4), ...closest].slice(0, 8);
   const arch = getArchetype(s.settings.villain, s.settings.stake);
+
+  const [saved, setSaved] = useState<boolean | null>(null);
+  useEffect(() => {
+    void isPersisted().then(setSaved);
+  }, []);
+  const protect = async () => {
+    const ok = await requestPersist();
+    setSaved(ok);
+    useUi
+      .getState()
+      .push(
+        ok
+          ? { icon: "🛡️", title: "Your progress is protected", body: "Your browser won't clear it on its own.", tone: "green" }
+          : { icon: "💾", title: "Your browser said not yet", body: "It usually says yes after a few sessions, or once you bookmark the app.", tone: "gold" },
+      );
+  };
 
   const exportData = () => {
     const blob = new Blob([localStorage.getItem("gto-dojo-v1") ?? "{}"], { type: "application/json" });
@@ -180,6 +197,13 @@ export function MePage() {
             <Switch checked={s.settings.fourColor} onChange={(v) => set({ fourColor: v })} label="Four-color deck" hint="Blue diamonds, green clubs" />
           </div>
           <div className="border-t border-white/[0.06]">
+            <ListRow
+              icon={saved ? ShieldCheck : Shield}
+              tone={saved ? "#22c55e" : saved === false ? "#fbbf24" : "#94a3b8"}
+              title="Progress on this device"
+              subtitle={saved ? "Protected from automatic clearing" : saved === false ? "Not protected yet. Tap to protect it." : "Saved in this browser"}
+              onClick={saved === false ? () => void protect() : undefined}
+            />
             <ListRow icon={Download} tone="#94a3b8" title="Export progress" onClick={exportData} />
             <ListRow icon={Upload} tone="#94a3b8" title="Import progress" onClick={() => fileRef.current?.click()} />
             <ListRow icon={RotateCcw} tone="#f87171" title="Reset everything" onClick={() => setSheet("reset")} />

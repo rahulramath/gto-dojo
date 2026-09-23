@@ -40,4 +40,4 @@ npm test         # engine, chart data and copy tests
 npm run build    # production build in dist/
 ```
 
-Your progress is saved in your browser. You can export or import it from Me, under Settings. Every push to `main` runs the tests, builds the app and deploys it to GitHub Pages.
+Your progress is saved in your browser, with no account or database. After each session the app asks the browser to keep that data so it isn't cleared automatically, and you can check this or export and import a backup from Me, under Settings. Every push to `main` runs the tests, builds the app and deploys it to GitHub Pages.

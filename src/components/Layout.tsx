@@ -65,7 +65,7 @@ function Toasts() {
           <span className="text-2xl leading-none">{t.icon}</span>
           <span className="min-w-0">
             <span className="t-body block font-semibold text-gold-200">{t.title}</span>
-            {t.body && <span className="t-label block truncate">{t.body}</span>}
+            {t.body && <span className="t-label line-clamp-2 block">{t.body}</span>}
           </span>
         </button>
       ))}
